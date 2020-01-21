@@ -5,7 +5,7 @@ defmodule SpeechMarkdown.Mixfile do
     [
       app: :speechmarkdown,
       name: "SpeechMarkdown",
-      version: "0.1.0",
+      version: "0.1.1",
       elixir: "~> 1.9",
       description: "SpeechMarkdown transpiler for Elixir",
       package: package(),
@@ -27,7 +27,7 @@ defmodule SpeechMarkdown.Mixfile do
   defp deps do
     [
       {:sweet_xml, "~> 0.6"},
-      {:nimble_parsec, "~> 0.5", optional: true},
+      {:nimble_parsec, "~> 0.5"},
       {:excoveralls, "~> 0.11", only: :test},
       {:credo, "~> 1.1", only: :dev, runtime: false},
       {:dialyxir, "~> 0.5", only: :dev, runtime: false},

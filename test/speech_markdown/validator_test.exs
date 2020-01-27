@@ -17,15 +17,38 @@ defmodule SpeechMarkdown.ValidatorTest do
     assert {:ok, _} = validate_ast([{:block, "200ms"}])
   end
 
-  test "x" do
+  test "validate a large AST" do
     {:ok, ast} =
-      parse(
-        "hello [200ms] there [lang:\"NL\"] and (foo [300ms] (d)[address] apentuin)[voice:\"James\";lang:\"nl\"] that is it\n\n#[voice:\"x\"] \nxxx"
-      )
+      parse("""
+      hello [200ms] there [lang:"NL"]
 
-    IO.inspect(ast, label: "ast")
+      (word)[bleep]
 
-    assert {:ok, _} = validate_ast(ast)
+      You say, (pecan)[ipa:"pɪˈkɑːn"].
+      I say, (pecan)[/ˈpi.kæn/].
+
+      and (foo [300ms] (d)[address]
+
+      [break:"weak"]
+      (lala)[emphasis]
+      (lala)[emphasis:"strong"]
+
+      apentuin)[voice:"James";lang:"nl"] that is it\n\n#[voice:"x"] \nxxx
+
+      !["audio.mp3"]
+
+      #[voice:"Kendra";lang:"en-US"]
+      Kendra from the US.
+
+      In Paris, they pronounce it (Paris)[lang:"fr-FR"].
+
+      When I wake up, (I speak quite slowly)[rate:"x-slow"].
+
+      """)
+
+    # IO.inspect(ast, label: "ast")
+
+    assert {:ok, _} = validate_ast(ast) |> IO.inspect(label: "i")
   end
 
   test "invalid constructs" do

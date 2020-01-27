@@ -94,6 +94,12 @@ defmodule SpeechMarkdown.Grammar do
     |> parsec(:block)
     |> unwrap_and_tag(:section)
 
+  audio =
+    ignore(string("![\""))
+    |> reduce(repeat(utf8_char([{:not, ?"}])), :to_string)
+    |> ignore(string("\"]"))
+    |> unwrap_and_tag(:audio)
+
   parenthesized =
     ignore(string("("))
     #    |> reduce(repeat(utf8_char([{:not, ?)}])), :to_string)
@@ -145,7 +151,7 @@ defmodule SpeechMarkdown.Grammar do
 
   defparsec(
     :document,
-    choice([section, parenthesized, parsec(:block), text])
+    choice([section, audio, parenthesized, parsec(:block), text])
     |> repeat()
     |> reduce(:merge)
   )

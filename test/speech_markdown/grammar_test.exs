@@ -36,6 +36,7 @@ defmodule SpeechMarkdown.Grammar.Test do
     # say-as
     assert {:ok, _} = parse("(www)[ characters]")
     assert {:ok, _} = parse("(1234)[number ]")
+    assert {:ok, _} = parse("![\"http://audio.mp3\"]") |> IO.inspect(label: "a")
 
     assert parse(
              "hello [bla] there [x:\"bar\"] and (foo [300ms] (d)[x] apentuin)[foo:\"bar\";lang:\"nl\"] that is it\n\n#[foo]\nxxx"

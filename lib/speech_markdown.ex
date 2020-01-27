@@ -1,4 +1,6 @@
 defmodule SpeechMarkdown do
+  alias SpeechMarkdown.Grammar
+  alias SpeechMarkdown.Validator
   alias SpeechMarkdown.Transpiler
 
   @type options() :: [option()]
@@ -17,13 +19,20 @@ defmodule SpeechMarkdown do
 
   """
   def to_ssml(input, options \\ []) do
-    Transpiler.transpile(input, options)
+    parse_and_transpile(input, options)
   end
 
   @doc """
   Convert the given Speech Markdown into plain text
   """
   def to_plaintext(input) do
-    Transpiler.transpile(input, variant: :plaintext)
+    parse_and_transpile(input, variant: :plaintext)
+  end
+
+  defp parse_and_transpile(input, options) do
+    with {:ok, parsed} <- Grammar.parse(input),
+         {:ok, validated} <- Validator.validate_ast(parsed) do
+      Transpiler.transpile(validated, options)
+    end
   end
 end

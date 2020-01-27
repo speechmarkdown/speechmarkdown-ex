@@ -8,31 +8,35 @@ defmodule SpeechMarkdown.Transpiler do
   alias SpeechMarkdown.Grammar
 
   @doc "convert a markdown string or ast to ssml text"
-  @spec transpile!(text :: String.t() | keyword()) :: String.t()
-  def transpile!(text) when is_binary(text) do
+  @spec transpile!(text :: String.t() | keyword(), SpeechMarkdown.options()) ::
+          String.t()
+  def transpile!(text, options) when is_binary(text) do
     text
     |> Grammar.parse!()
-    |> transpile!()
+    |> transpile!(options)
   end
 
-  def transpile!(ast) do
-    {:ok, xml} = transpile(ast)
+  def transpile!(ast, options) do
+    {:ok, xml} = transpile(ast, options)
     xml
   end
 
   @doc "convert a markdown string or ast to ssml text"
-  @spec transpile(text :: String.t() | keyword()) :: {:ok, String.t()}
-  def transpile(text) when is_binary(text) do
+  @spec transpile(text :: String.t() | keyword(), SpeechMarkdown.options()) ::
+          {:ok, String.t()}
+  def transpile(text, options) when is_binary(text) do
     with {:ok, ast} <- Grammar.parse(text) do
-      transpile(ast)
+      transpile(ast, options)
     end
   end
 
-  def transpile(ast) do
+  def transpile(ast, options) do
     {:ok,
      [{:speak, Enum.map(ast, &convert/1)}]
      |> :xmerl.export_simple(:xmerl_xml)
-     |> IO.chardata_to_string()}
+     |> IO.chardata_to_string()
+     |> opt_strip_declaration(Keyword.get(options, :xml_declaration, true))
+     |> opt_plaintext_output(Keyword.get(options, :variant, nil))}
   end
 
   defp convert({:break, [time, units]}) do
@@ -51,4 +55,13 @@ defmodule SpeechMarkdown.Transpiler do
   defp convert({:text, text}) do
     String.to_charlist(text)
   end
+
+  defp opt_strip_declaration("<?xml version=\"1.0\"?>" <> rest, true), do: rest
+  defp opt_strip_declaration(input, _false), do: input
+
+  defp opt_plaintext_output(input, :plaintext) do
+    Regex.replace(~r/\<[^>]*?>/, input, "")
+  end
+
+  defp opt_plaintext_output(input, _), do: input
 end

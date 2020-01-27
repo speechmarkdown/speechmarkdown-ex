@@ -7,8 +7,10 @@ defmodule SpeechMarkdown.TestFilesTest do
     def fixture(test) do
       base = @base <> test <> "/" <> test
 
-      {File.read!(base <> ".smd"), File.read!(base <> ".alexa.ssml"),
-       File.read!(base <> ".google.ssml"), File.read!(base <> ".txt")}
+      {File.read!(base <> ".smd"),
+       File.read!(base <> ".alexa.ssml") |> String.replace("\n", ""),
+       File.read!(base <> ".google.ssml") |> String.replace("\n", ""),
+       File.read!(base <> ".txt")}
     end
 
     def paths() do
@@ -16,22 +18,30 @@ defmodule SpeechMarkdown.TestFilesTest do
     end
   end
 
-  import SpeechMarkdown.Transpiler
+  import SpeechMarkdown, only: [to_ssml: 2, to_plaintext: 1]
 
   for path <- Helper.paths() do
     testcase = Path.basename(path)
     {smd, alexa, google, txt} = Helper.fixture(testcase)
 
     test "#{testcase} - Alexa" do
-      assert {:ok, unquote(alexa)} === transpile(unquote(smd))
+      assert {:ok, result} = to_ssml(unquote(smd), variant: :alexa)
+      # result is equal
+      assert result === unquote(alexa)
+      # result is parsable
+      assert [:xmlElement | _] = SweetXml.parse(result) |> Tuple.to_list()
     end
 
     test "#{testcase} - Google Assistant" do
-      assert {:ok, unquote(google)} === transpile(unquote(smd))
+      assert {:ok, result} = to_ssml(unquote(smd), variant: :google)
+      # result is equal
+      assert result === unquote(google)
+      # result is parsable
+      assert [:xmlElement | _] = SweetXml.parse(result) |> Tuple.to_list()
     end
 
     test "#{testcase} - plain text" do
-      assert {:ok, unquote(txt)} === transpile(unquote(smd))
+      assert {:ok, unquote(txt)} === to_plaintext(unquote(smd))
     end
   end
 end

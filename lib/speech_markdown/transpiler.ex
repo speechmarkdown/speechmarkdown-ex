@@ -60,7 +60,8 @@ defmodule SpeechMarkdown.Transpiler do
   defp opt_strip_declaration(input, _false), do: input
 
   defp opt_plaintext_output(input, :plaintext) do
-    Regex.replace(~r/\<[^>]*?>/, input, "")
+    output = Regex.replace(~r/\<[^>]*?>/, input, "")
+    Regex.replace(~r/[ ][ ]+/, output, " ")
   end
 
   defp opt_plaintext_output(input, _), do: input

@@ -28,8 +28,15 @@ defmodule SpeechMarkdown.Grammar do
   @doc "parse a speech markdown string into an ast"
   @spec parse(text :: String.t()) :: {:ok, keyword()}
   def parse(text) do
-    with {:ok, [ast], _, _, _, _} <- document(text) do
-      {:ok, ast}
+    case document(text) do
+      {:ok, [ast], "", _, _, _} ->
+        {:ok, ast}
+
+      {:ok, [_], rest, _, _, _} ->
+        {:error, "Incomplete input near: " <> rest}
+
+      r ->
+        r
     end
   end
 
@@ -52,67 +59,76 @@ defmodule SpeechMarkdown.Grammar do
   atomize = &map(string(empty(), &1), {String, :to_atom, []})
   space = repeat(ascii_char('\r\n\s\t'))
 
-  # --------------------------------------------------------------------------
-  # breaks
-  # --------------------------------------------------------------------------
-  break =
-    ignore(string("["))
-    |> ignore(space)
-    |> ignore(optional(string("break") |> optional(space) |> string(":")))
-    |> ignore(space)
-    |> integer(min: 1)
-    |> choice([atomize.("ms"), atomize.("s")])
-    |> ignore(space)
-    |> ignore(string("]"))
-    |> tag(:break)
+  identifier =
+    reduce(
+      repeat(ascii_char('_abcdefghijklmnopqrstuvwxyz1234567890')),
+      :to_string
+    )
 
-  # --------------------------------------------------------------------------
-  # ipa
-  # --------------------------------------------------------------------------
-  ipa_long =
-    ignore(optional(string("ipa") |> optional(space) |> string(":")))
-    |> ignore(space)
-    |> ignore(string("\""))
+  single_quoted =
+    ignore(string("'"))
+    |> reduce(repeat(utf8_char([{:not, ?'}])), :to_string)
+    |> ignore(string("'"))
+
+  double_quoted =
+    ignore(string("\""))
     |> reduce(repeat(utf8_char([{:not, ?"}])), :to_string)
     |> ignore(string("\""))
 
-  ipa_short =
-    ignore(string("/"))
-    |> reduce(repeat(utf8_char([{:not, ?/}])), :to_string)
-    |> ignore(string("/"))
+  defparsec(
+    :keyvalue,
+    identifier
+    |> ignore(string(":"))
+    |> choice([single_quoted, double_quoted])
+    |> optional(
+      ignore(string(";"))
+      |> concat(parsec(:keyvalue))
+    )
+    |> reduce(:x)
+  )
 
-  ipa =
-    choice([ipa_long, ipa_short])
-    |> unwrap_and_tag(:ipa)
+  defp kv([{:kv, [k, v]} | rest]) do
+    [{k, v} | rest]
+  end
 
-  # --------------------------------------------------------------------------
-  # say-as
-  # --------------------------------------------------------------------------
-  say =
-    choice([atomize.("characters"), atomize.("number")])
-    |> unwrap_and_tag(:say)
+  section =
+    ignore(string("#"))
+    |> parsec(:block)
+    |> tag(:section)
 
-  # --------------------------------------------------------------------------
-  # all modifiers
-  # --------------------------------------------------------------------------
-  modifier =
+  parenthesized =
     ignore(string("("))
     |> reduce(repeat(utf8_char([{:not, ?)}])), :to_string)
-    |> ignore(string(")["))
-    |> ignore(space)
-    |> choice([ipa, say])
-    |> ignore(space)
+    |> ignore(string(")"))
+    |> parsec(:block)
+    |> tag(:paren_block)
+    |> map(:x)
+
+  def x(x) do
+    IO.inspect(x, label: "x")
+  end
+
+  # --------------------------------------------------------------------------
+  # breaks
+  # --------------------------------------------------------------------------
+  defparsec(
+    :block,
+    ignore(string("["))
+    |> choice([
+      parsec(:keyvalue) |> tag(:kv_block),
+      identifier |> tag(:block)
+    ])
     |> ignore(string("]"))
-    |> tag(:modifier)
+  )
 
   text =
-    utf8_char([])
+    utf8_char([{:not, ?[}])
     |> reduce(:to_string)
     |> unwrap_and_tag(:text)
 
   defparsec(
     :document,
-    choice([break, modifier, text])
+    choice([section, parenthesized, parsec(:block), text])
     |> repeat()
     |> reduce(:merge)
   )

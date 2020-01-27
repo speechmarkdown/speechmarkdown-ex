@@ -4,49 +4,41 @@ defmodule SpeechMarkdown.Grammar.Test do
   import SpeechMarkdown.Grammar
 
   test "parse" do
-    assert parse(
-             "hello [bla] there [x:\"bar\"] and (baz)[foo:\"bar\";lang:\"nl\"] that is it\n\n#[foo]\nxxx"
-           )
-           |> IO.inspect(label: "x")
-
     # # unsupported markup
-    # assert parse("") === {:ok, []}
-    # assert parse!(" ") === [text: " "]
-    # assert parse!("(") === [text: "("]
-    # assert parse!(")") === [text: ")"]
-    # assert parse!("[") === [text: "["]
-    # assert parse!("]") === [text: "]"]
-    # assert parse!("()[]") === [text: "()[]"]
-    # assert parse!("[invalid]") === [text: "[invalid]"]
-    # assert parse!("[break:]") === [text: "[break:]"]
-    # assert parse!("[5m]") === [text: "[5m]"]
-    # assert parse!("(pecan)[ipa:]") === [text: "(pecan)[ipa:]"]
-    # assert parse!("(pecan)[/]") === [text: "(pecan)[/]"]
-    # assert parse!("[/pɪˈkɑːn/]") === [text: "[/pɪˈkɑːn/]"]
-    # assert parse!("(pecan)[whisper]") === [text: "(pecan)[whisper]"]
-    # assert parse!("(pecan))[/pɪˈkɑːn/]") === [text: "(pecan))[/pɪˈkɑːn/]"]
+    assert {:ok, _} = parse("")
+    assert {:ok, _} = parse(" ")
+    assert {:ok, _} = parse("(")
+    #    assert {:ok, _} = parse(")")
+    #   assert {:ok, _} = parse("[")
+    assert {:ok, _} = parse("]")
+    assert {:ok, _} = parse("()[]")
+    assert {:ok, _} = parse("[invalid]")
+    # assert {:ok, _} = parse("[break:]")
+    assert {:ok, _} = parse("[5m]")
+    # assert {:ok, _} = parse("(pecan)[ipa:]")
+    # assert {:ok, _} = parse("(pecan)[/]")
+    assert {:ok, _} = parse("(Al)[sub:\"aluminum;\"]")
+
+    assert {:ok, _} = parse("[/pɪˈkɑːn/]")
+    assert {:ok, _} = parse("(pecan)[whisper]")
+    assert {:ok, _} = parse("(pecan)[/pɪˈkɑːn/]")
 
     # # breaks
-    # assert parse!("[ 100ms]") === [break: [100, :ms]]
-    # assert parse!("[2s ]") === [break: [2, :s]]
-    # assert parse!("[ break : 5s ]") === [break: [5, :s]]
+    assert {:ok, _} = parse("[ 100ms]")
+    assert {:ok, _} = parse("[2s ]")
+    assert {:ok, _} = parse("[ break : \"5s\" ]")
 
     # # ipa
-    # assert parse!("(pecan)[ /pɪˈkɑːn/]") === [
-    #          modifier: ["pecan", ipa: "pɪˈkɑːn"]
-    #        ]
+    assert {:ok, _} = parse("(pecan)[ /pɪˈkɑːn/]")
 
-    # assert parse!("(pecan)[ipa : \"pɪˈkɑːn\" ]") === [
-    #          modifier: ["pecan", ipa: "pɪˈkɑːn"]
-    #        ]
+    assert {:ok, _} = parse("(pecan)[ipa : \"pɪˈkɑːn\" ]")
 
-    # # say-as
-    # assert parse!("(www)[ characters]") === [
-    #          modifier: ["www", say: :characters]
-    #        ]
+    # say-as
+    assert {:ok, _} = parse("(www)[ characters]")
+    assert {:ok, _} = parse("(1234)[number ]")
 
-    # assert parse!("(1234)[number ]") === [
-    #          modifier: ["1234", say: :number]
-    #        ]
+    assert parse(
+             "hello [bla] there [x:\"bar\"] and (foo [300ms] (d)[x] apentuin)[foo:\"bar\";lang:\"nl\"] that is it\n\n#[foo]\nxxx"
+           )
   end
 end

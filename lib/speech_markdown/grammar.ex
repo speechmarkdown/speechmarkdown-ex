@@ -56,8 +56,8 @@ defmodule SpeechMarkdown.Grammar do
   # --------------------------------------------------------------------------
   # helpers
   # --------------------------------------------------------------------------
-  atomize = &map(string(empty(), &1), {String, :to_atom, []})
-  space = repeat(ascii_char('\r\n\s\t'))
+  # FIXME whitespace
+  space = ignore(repeat(ascii_char('\r\n\s\t')))
 
   identifier =
     reduce(
@@ -78,35 +78,35 @@ defmodule SpeechMarkdown.Grammar do
   defparsec(
     :keyvalue,
     identifier
+    |> optional(space)
     |> ignore(string(":"))
+    |> optional(space)
     |> choice([single_quoted, double_quoted])
     |> optional(
       ignore(string(";"))
+      |> optional(space)
       |> concat(parsec(:keyvalue))
     )
-    |> reduce(:x)
   )
-
-  defp kv([{:kv, [k, v]} | rest]) do
-    [{k, v} | rest]
-  end
 
   section =
     ignore(string("#"))
     |> parsec(:block)
-    |> tag(:section)
+    |> unwrap_and_tag(:section)
 
   parenthesized =
     ignore(string("("))
-    |> reduce(repeat(utf8_char([{:not, ?)}])), :to_string)
+    #    |> reduce(repeat(utf8_char([{:not, ?)}])), :to_string)
+    |> concat(parsec(:document))
     |> ignore(string(")"))
     |> parsec(:block)
-    |> tag(:paren_block)
-    |> map(:x)
+    |> reduce(:nested_block)
 
-  def x(x) do
-    IO.inspect(x, label: "x")
-  end
+  ipa =
+    ignore(string("/"))
+    |> reduce(repeat(utf8_char([{:not, ?/}])), :to_string)
+    |> ignore(string("/"))
+    |> unwrap_and_tag(:ipa)
 
   # --------------------------------------------------------------------------
   # breaks
@@ -114,15 +114,32 @@ defmodule SpeechMarkdown.Grammar do
   defparsec(
     :block,
     ignore(string("["))
+    |> optional(space)
     |> choice([
-      parsec(:keyvalue) |> tag(:kv_block),
-      identifier |> tag(:block)
+      ipa,
+      parsec(:keyvalue) |> reduce(:kv_block),
+      identifier |> unwrap_and_tag(:block)
     ])
+    |> optional(space)
     |> ignore(string("]"))
   )
 
+  def nested_block([a, b]) do
+    {:nested_block, a, b}
+  end
+
+  def kv_block(x) do
+    {:kv_block, kv_block1(x, [])}
+  end
+
+  def kv_block1([], acc), do: acc
+
+  def kv_block1([k, v | rest], acc) do
+    kv_block1(rest, [{k, v} | acc])
+  end
+
   text =
-    utf8_char([{:not, ?[}])
+    utf8_char([{:not, ?[}, {:not, ?)}])
     |> reduce(:to_string)
     |> unwrap_and_tag(:text)
 

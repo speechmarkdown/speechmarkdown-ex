@@ -10,6 +10,10 @@ defmodule SpeechMarkdown.Transpiler.Alexa do
     {:"amazon:domain", [name: 'music'], inner}
   end
 
+  def emotion(inner, "newscaster") do
+    {:"amazon:domain", [name: 'news'], inner}
+  end
+
   def emotion(inner, block) do
     case section_to_xml_attrs(block) do
       {:ok, attrs} ->

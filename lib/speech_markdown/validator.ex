@@ -1,6 +1,6 @@
 defmodule SpeechMarkdown.Validator do
-  @blocks ~w(address cardinal number characters expletive bleep fraction interjection ordinal phone telephone unit whisper emphasis excited disappointed)
-  @attributes ~w(break date emphasis lang voice pitch ipa sub disappointed excited)
+  @blocks ~w(address cardinal number characters expletive fraction interjection ordinal phone telephone unit whisper emphasis excited disappointed)
+  @attributes ~w(break date time emphasis lang voice pitch ipa sub disappointed excited)
 
   @enum_attrs [
     rate: ~w(x-slow slow medium fast x-fast),
@@ -118,6 +118,10 @@ defmodule SpeechMarkdown.Validator do
     end
   end
 
+  defp validate_kvs([{"vol", value} | rest], acc) do
+    validate_kvs([{"volume", value} | rest], acc)
+  end
+
   defp validate_kvs([{"break", break} | rest], acc) do
     with :ok <- valid_delay(break) do
       validate_kvs(rest, [{"break", break} | acc])
@@ -143,11 +147,27 @@ defmodule SpeechMarkdown.Validator do
     end
   end
 
+  defp convert_nested({:block, "emphasis"}) do
+    {:ok, {:kv_block, [{"emphasis", "moderate"}]}}
+  end
+
+  defp convert_nested({:block, "pitch"}) do
+    {:ok, {:kv_block, [{"pitch", "medium"}]}}
+  end
+
+  defp convert_nested({:block, "rate"}) do
+    {:ok, {:kv_block, [{"rate", "medium"}]}}
+  end
+
+  defp convert_nested({:block, v}) when v in ~w(vol volume) do
+    {:ok, {:kv_block, [{"volume", "medium"}]}}
+  end
+
   defp convert_nested({:block, block}) when block in @blocks do
     {:ok, {:block, block}}
   end
 
-  @translate_blocks %{"chars" => "characters"}
+  @translate_blocks %{"chars" => "characters", "bleep" => "expletive"}
   @translate_block_header Map.keys(@translate_blocks)
 
   defp convert_nested({:block, block}) when block in @translate_block_header do
@@ -166,6 +186,10 @@ defmodule SpeechMarkdown.Validator do
     {:ok, {:kv_block, [{"sub", sub}]}}
   end
 
+  defp convert_nested(:empty_block) do
+    {:ok, :empty_block}
+  end
+
   defp convert_nested({:kv_block, kvs}) do
     with {:ok, kvs1} <- validate_kvs(kvs) do
       {:ok, {:kv_block, kvs1}}
@@ -174,4 +198,39 @@ defmodule SpeechMarkdown.Validator do
 
   def break_attr(type) when type in @delay_enum, do: :strength
   def break_attr(_type), do: :time
+
+  @alexa_voices %{
+                  "Ivy" => "en-US",
+                  "Joanna" => "en-US",
+                  "Joey" => "en-US",
+                  "Justin" => "en-US",
+                  "Kendra" => "en-US",
+                  "Kimberly" => "en-US",
+                  "Matthew" => "en-US",
+                  "Salli" => "en-US",
+                  "Nicole" => "en-AU",
+                  "Russell" => "en-AU",
+                  "Amy" => "en-GB",
+                  "Brian" => "en-GB",
+                  "Emma" => "en-GB",
+                  "Aditi" => "en-IN",
+                  "Raveena" => "en-IN",
+                  "Hans" => "de-DE",
+                  "Marlene" => "de-DE",
+                  "Vicki" => "de-DE",
+                  "Conchita" => "es-ES",
+                  "Enrique" => "es-ES",
+                  "Carla" => "it-IT",
+                  "Giorgio" => "it-IT",
+                  "Mizuki" => "ja-JP",
+                  "Takumi" => "ja-JP",
+                  "Celine" => "fr-FR",
+                  "Lea" => "fr-FR",
+                  "Mathieu" => "fr-FR"
+                }
+                |> Map.keys()
+
+  def alexa_voice(voice) do
+    Enum.find(@alexa_voices, &(String.downcase(&1) == String.downcase(voice)))
+  end
 end

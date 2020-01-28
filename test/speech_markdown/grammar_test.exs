@@ -45,6 +45,8 @@ defmodule SpeechMarkdown.Grammar.Test do
     assert parse(
              "hello [bla] there [x:\"bar\"] and (foo [300ms] (d)[x] apentuin)[foo:\"bar\";lang:\"nl\"] that is it\n\n#[foo]\nxxx"
            )
+
+    #           |> IO.inspect(label: "x")
   end
 
   test "emphasis" do
@@ -72,5 +74,19 @@ defmodule SpeechMarkdown.Grammar.Test do
               {:nested_block, [text: "reduced"],
                {:kv_block, [{"emphasis", "reduced"}]}}
             ]} = parse("++strong++ +med+ ~moderate~ -reduced-")
+  end
+
+  test "special chars" do
+    text = """
+    This is text with (parens) but this and other special characters: []()*~@#\\_!+- are ignored
+    """
+
+    assert [text: _] = parse!(text)
+
+    text = """
+    This is text with ~parens! but this and other special characters: *~@#\\_!+- are ignored
+    """
+
+    assert [text: _] = parse!(text)
   end
 end

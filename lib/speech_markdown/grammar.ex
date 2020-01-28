@@ -62,7 +62,8 @@ defmodule SpeechMarkdown.Grammar do
 
   identifier =
     reduce(
-      repeat(ascii_char('_abcdefghijklmnopqrstuvwxyz1234567890')),
+      ascii_char('_abcdefghijklmnopqrstuvwxyz1234567890')
+      |> concat(repeat(ascii_char('_abcdefghijklmnopqrstuvwxyz1234567890'))),
       :to_string
     )
 
@@ -101,12 +102,16 @@ defmodule SpeechMarkdown.Grammar do
     |> ignore(string("]"))
     |> unwrap_and_tag(:audio)
 
+  defp empty_block(_x) do
+    :empty_block
+  end
+
   parenthesized =
     ignore(string("("))
-    #    |> reduce(repeat(utf8_char([{:not, ?)}])), :to_string)
-    |> concat(parsec(:document))
+    |> reduce(repeat(utf8_char([{:not, ?)}])), :to_string)
+    #    |> concat(parsec(:document))
     |> ignore(string(")"))
-    |> parsec(:block)
+    |> choice([parsec(:block), string("[]") |> reduce(:empty_block)])
     |> reduce(:nested_block)
 
   ipa =
@@ -134,7 +139,7 @@ defmodule SpeechMarkdown.Grammar do
   )
 
   def nested_block([a, b]) do
-    {:nested_block, a, b}
+    {:nested_block, [{:text, a}], b}
   end
 
   def kv_block(x) do
@@ -154,8 +159,9 @@ defmodule SpeechMarkdown.Grammar do
   non_ctrl_instr =
     utf8_char((@ws ++ [?), ?], ?[, ?(, 35, ?!]) |> Enum.map(&{:not, &1}))
 
+  # [{:not, ?[}, {:not, ?)}])
   plaintext =
-    utf8_char([{:not, ?[}, {:not, ?)}])
+    utf8_char([])
     |> reduce(:to_string)
     |> unwrap_and_tag(:text)
 
@@ -168,6 +174,7 @@ defmodule SpeechMarkdown.Grammar do
     |> repeat(utf8_char([{:not, char}]))
     |> reduce(:to_string)
     |> ignore(string(abbrev))
+    |> lookahead(choice([ws, eos()]))
     |> reduce({:short_emphasis, [emphasis]})
   end
 
@@ -185,9 +192,9 @@ defmodule SpeechMarkdown.Grammar do
   defparsec(
     :document,
     choice([
+      parenthesized,
       section,
       audio,
-      parenthesized,
       parsec(:block),
       parsec(:any_emphasis),
       plaintext

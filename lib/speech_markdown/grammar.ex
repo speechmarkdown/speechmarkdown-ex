@@ -58,6 +58,7 @@ defmodule SpeechMarkdown.Grammar do
   # --------------------------------------------------------------------------
   # FIXME whitespace
   space = ignore(repeat(ascii_char('\r\n\s\t')))
+  non_ws_char = utf8_char([9, 10, 11, 12, 13, 32] |> Enum.map(&{:not, &1}))
 
   identifier =
     reduce(
@@ -95,9 +96,9 @@ defmodule SpeechMarkdown.Grammar do
     |> unwrap_and_tag(:section)
 
   audio =
-    ignore(string("![\""))
-    |> reduce(repeat(utf8_char([{:not, ?"}])), :to_string)
-    |> ignore(string("\"]"))
+    ignore(string("!["))
+    |> choice([single_quoted, double_quoted])
+    |> ignore(string("]"))
     |> unwrap_and_tag(:audio)
 
   parenthesized =
@@ -146,6 +147,13 @@ defmodule SpeechMarkdown.Grammar do
     kv_block1(rest, [{k, v} | acc])
   end
 
+  @ws [9, 10, 11, 12, 13, 32]
+  ws = ascii_char(@ws)
+  non_ws = utf8_char(@ws |> Enum.map(&{:not, &1}))
+
+  non_ctrl_instr =
+    utf8_char((@ws ++ [?), ?], ?[, ?(, 35, ?!]) |> Enum.map(&{:not, &1}))
+
   plaintext =
     utf8_char([{:not, ?[}, {:not, ?)}])
     |> reduce(:to_string)
@@ -154,7 +162,9 @@ defmodule SpeechMarkdown.Grammar do
   emphasized = fn abbrev, emphasis ->
     <<char, _::binary>> = abbrev
 
-    ignore(string(abbrev))
+    empty()
+    |> ignore(string(abbrev))
+    |> concat(non_ctrl_instr)
     |> repeat(utf8_char([{:not, char}]))
     |> reduce(:to_string)
     |> ignore(string(abbrev))
@@ -169,16 +179,17 @@ defmodule SpeechMarkdown.Grammar do
       emphasized.("~", "none"),
       emphasized.("-", "reduced")
     ])
+    |> lookahead_not(ascii_char([?a..?z, ?A..?Z, ?0..?9]))
   )
 
   defparsec(
     :document,
     choice([
-      parsec(:any_emphasis),
       section,
       audio,
       parenthesized,
       parsec(:block),
+      parsec(:any_emphasis),
       plaintext
     ])
     # choice([section, audio, parenthesized, parsec(:block), strong, plaintext])
@@ -186,7 +197,7 @@ defmodule SpeechMarkdown.Grammar do
     |> reduce(:merge)
   )
 
-  defp short_emphasis(text, emphasis) do
+  defp short_emphasis([text], emphasis) do
     {:nested_block, [text: text], {:kv_block, [{"emphasis", emphasis}]}}
   end
 end

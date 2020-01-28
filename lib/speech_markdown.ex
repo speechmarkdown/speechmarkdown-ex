@@ -8,6 +8,7 @@ defmodule SpeechMarkdown do
 
   alias SpeechMarkdown.Grammar
   alias SpeechMarkdown.Validator
+  alias SpeechMarkdown.Sectionizer
   alias SpeechMarkdown.Transpiler
 
   @type options() :: [option()]
@@ -27,8 +28,9 @@ defmodule SpeechMarkdown do
   """
   def to_ssml(input, options \\ []) do
     with {:ok, parsed} <- Grammar.parse(input),
-         {:ok, validated} <- Validator.validate_ast(parsed) do
-      Transpiler.transpile(validated, options)
+         {:ok, validated} <- Validator.validate(parsed),
+         {:ok, sectionized} <- Sectionizer.sectionize(validated) do
+      Transpiler.transpile(sectionized, options)
     end
   end
 

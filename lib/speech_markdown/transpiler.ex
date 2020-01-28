@@ -5,18 +5,11 @@ defmodule SpeechMarkdown.Transpiler do
   as an SSML string.
   """
 
-  alias SpeechMarkdown.{Grammar, Validator}
+  alias SpeechMarkdown.{Grammar, Validator, Transpiler.Alexa}
 
   @doc "convert a markdown string or ast to ssml text"
-  @spec transpile!(text :: String.t() | keyword(), SpeechMarkdown.options()) ::
+  @spec transpile!([Grammar.node()], SpeechMarkdown.options()) ::
           String.t()
-  def transpile!(text, options) when is_binary(text) do
-    text
-    |> Grammar.parse!()
-    |> Validator.validate_ast!()
-    |> transpile!(options)
-  end
-
   def transpile!(ast, options) do
     {:ok, xml} = transpile(ast, options)
     xml
@@ -32,30 +25,111 @@ defmodule SpeechMarkdown.Transpiler do
   end
 
   def transpile(ast, options) do
+    xml_declaration = Keyword.get(options, :xml_declaration, false)
+    variant = Keyword.get(options, :variant, :general)
+
     {:ok,
-     [{:speak, Enum.map(ast, &convert/1)}]
+     [{:speak, Enum.map(ast, &convert(&1, variant))}]
      |> :xmerl.export_simple(:xmerl_xml)
      |> IO.chardata_to_string()
-     |> opt_strip_declaration(Keyword.get(options, :xml_declaration, false))}
+     |> opt_strip_declaration(xml_declaration)}
   end
 
-  defp convert({:kv_block, [{"break", break}]}) do
-    {:break, [time: break], []}
+  ### BREAK
+
+  defp convert({:kv_block, [{"break", break}]}, _variant) do
+    {:break, [{Validator.break_attr(break), break}], []}
   end
 
-  defp convert({:nested_block, [text: text], {:kv_block, [{"ipa", ipa}]}}) do
-    {:phoneme, [alphabet: :ipa, ph: String.to_charlist(ipa)],
-     [String.to_charlist(text)]}
+  ### IPA
+
+  defp convert(
+         {:nested_block, nodes, {:kv_block, [{"ipa", _ipa}]}},
+         :google
+       ) do
+    Enum.map(nodes, &convert(&1, :google))
   end
 
-  @interpret_as ~w(characters number)
-  defp convert({:nested_block, [text: text], {:block, say}})
+  defp convert(
+         {:nested_block, nodes, {:kv_block, [{"ipa", ipa}]}},
+         variant
+       ) do
+    {:phoneme, [alphabet: :ipa, ph: ch(ipa)],
+     Enum.map(nodes, &convert(&1, variant))}
+  end
+
+  ### SECTIONS
+
+  defp convert({:section, block, nodes}, :alexa) do
+    nodes
+    |> Enum.map(&convert(&1, :alexa))
+    |> Alexa.emotion(block)
+  end
+
+  defp convert({:section, _section, inner}, variant) do
+    Enum.map(inner, &convert(&1, variant))
+  end
+
+  @emotions Alexa.emotions()
+
+  defp convert({:nested_block, nodes, {:block, emotion} = block}, :alexa)
+       when emotion in @emotions do
+    nodes
+    |> Enum.map(&convert(&1, :alexa))
+    |> Alexa.emotion(block)
+  end
+
+  defp convert(
+         {:nested_block, nodes, {:kv_block, [{emotion, _}] = block}},
+         :alexa
+       )
+       when emotion in @emotions do
+    nodes
+    |> Enum.map(&convert(&1, :alexa))
+    |> Alexa.emotion(block)
+  end
+
+  defp convert({:nested_block, nodes, {:block, emotion}}, variant)
+       when emotion in @emotions do
+    Enum.map(nodes, &convert(&1, variant))
+  end
+
+  defp convert(
+         {:nested_block, nodes, {:kv_block, [{emotion, _}]}},
+         variant
+       )
+       when emotion in @emotions do
+    Enum.map(nodes, &convert(&1, variant))
+  end
+
+  ### SAY-AS
+  defp convert(
+         {:nested_block, nodes, {:kv_block, [{"emphasis", level}]}},
+         variant
+       ) do
+    {:emphasis, [level: ch(level)], Enum.map(nodes, &convert(&1, variant))}
+  end
+
+  defp convert(
+         {:nested_block, nodes, {:kv_block, [{"date", format}]}},
+         variant
+       ) do
+    {:"say-as", ["interpret-as": 'date', format: ch(format)],
+     Enum.map(nodes, &convert(&1, variant))}
+  end
+
+  @interpret_as ~w(characters number address chars)
+  defp convert({:nested_block, nodes, {:block, say}}, variant)
        when say in @interpret_as do
-    {:"say-as", ["interpret-as": say], [String.to_charlist(text)]}
+    {:"say-as", ["interpret-as": say], Enum.map(nodes, &convert(&1, variant))}
   end
 
-  defp convert({:text, text}) do
-    String.to_charlist(text)
+  defp convert({:audio, src}, _variant) do
+    {:audio, [src: ch(src)], []}
+  end
+
+  defp convert({:text, text}, _variant) do
+    ch(text)
   end
 
   defp opt_strip_declaration("<?xml version=\"1.0\"?>" <> rest, false), do: rest
@@ -78,7 +152,9 @@ defmodule SpeechMarkdown.Transpiler do
     nodes |> Enum.map(&plaintext_node/1)
   end
 
-  defp plaintext_node({:block, _}) do
+  defp plaintext_node({block, _}) when block in ~w(block kv_block audio)a do
     []
   end
+
+  defdelegate ch(s), to: String, as: :to_charlist
 end

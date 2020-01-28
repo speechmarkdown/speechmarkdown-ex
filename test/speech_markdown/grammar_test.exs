@@ -4,10 +4,6 @@ defmodule SpeechMarkdown.Grammar.Test do
   import SpeechMarkdown.Grammar
 
   test "parse" do
-    assert {:ok, _} = parse("++strong++")
-
-    assert {:ok, _} = parse("++strong++ +med+ ~moderate~ -reduced-")
-
     # # unsupported markup
     assert {:ok, _} = parse("")
     assert {:ok, _} = parse(" ")
@@ -43,9 +39,38 @@ defmodule SpeechMarkdown.Grammar.Test do
     assert {:ok, _} = parse("![\"http://audio.mp3\"]")
     assert {:ok, _} = parse("[\"aluminum\"]")
     assert {:ok, _} = parse("(Al)[\"aluminum\"]")
+  end
 
+  test "large test case" do
     assert parse(
              "hello [bla] there [x:\"bar\"] and (foo [300ms] (d)[x] apentuin)[foo:\"bar\";lang:\"nl\"] that is it\n\n#[foo]\nxxx"
            )
+  end
+
+  test "emphasis" do
+    assert [text: _] = parse!("foo - bar - baz")
+
+    assert [text: _] = parse!("foo-bar-baz")
+
+    assert {:ok,
+            [
+              {:nested_block, [text: "strong"],
+               {:kv_block, [{"emphasis", "strong"}]}}
+            ]} = parse("++strong++")
+
+    assert {:ok,
+            [
+              {:nested_block, [text: "strong"],
+               {:kv_block, [{"emphasis", "strong"}]}},
+              {:text, " "},
+              {:nested_block, [text: "med"],
+               {:kv_block, [{"emphasis", "moderate"}]}},
+              {:text, " "},
+              {:nested_block, [text: "moderate"],
+               {:kv_block, [{"emphasis", "none"}]}},
+              {:text, " "},
+              {:nested_block, [text: "reduced"],
+               {:kv_block, [{"emphasis", "reduced"}]}}
+            ]} = parse("++strong++ +med+ ~moderate~ -reduced-")
   end
 end

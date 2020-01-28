@@ -1,4 +1,9 @@
 defmodule SpeechMarkdown.Validator do
+  def validate_ast!(raw) when is_list(raw) do
+    {:ok, validated} = validate_ast(raw)
+    validated
+  end
+
   def validate_ast(raw) when is_list(raw) do
     with {:ok, nodes} <-
            Enum.reduce(
@@ -40,7 +45,7 @@ defmodule SpeechMarkdown.Validator do
        when x >= ?0 and x <= ?9 do
     # validate break
     with :ok <- valid_delay(break) do
-      {:ok, {:kv_block, [{:break, break}]}}
+      {:ok, {:kv_block, [{"break", break}]}}
     end
   end
 

@@ -1,4 +1,11 @@
 defmodule SpeechMarkdown do
+  @moduledoc """
+  Elixir implementation for the Speech Markdown format.
+
+  https://www.speechmarkdown.org/
+
+  """
+
   alias SpeechMarkdown.Grammar
   alias SpeechMarkdown.Validator
   alias SpeechMarkdown.Transpiler
@@ -19,20 +26,28 @@ defmodule SpeechMarkdown do
 
   """
   def to_ssml(input, options \\ []) do
-    parse_and_transpile(input, options)
+    with {:ok, parsed} <- Grammar.parse(input),
+         {:ok, validated} <- Validator.validate_ast(parsed) do
+      Transpiler.transpile(validated, options)
+    end
+  end
+
+  def to_ssml!(input, options \\ []) do
+    {:ok, output} = to_ssml(input, options)
+    output
   end
 
   @doc """
   Convert the given Speech Markdown into plain text
   """
   def to_plaintext(input) do
-    parse_and_transpile(input, variant: :plaintext)
+    with {:ok, parsed} <- Grammar.parse(input) do
+      Transpiler.plaintext(parsed)
+    end
   end
 
-  defp parse_and_transpile(input, options) do
-    with {:ok, parsed} <- Grammar.parse(input),
-         {:ok, validated} <- Validator.validate_ast(parsed) do
-      Transpiler.transpile(validated, options)
-    end
+  def to_plaintext!(input) do
+    {:ok, output} = to_plaintext(input)
+    output
   end
 end

@@ -4,6 +4,10 @@ defmodule SpeechMarkdown.Grammar.Test do
   import SpeechMarkdown.Grammar
 
   test "parse" do
+    assert {:ok, _} = parse("++strong++")
+
+    assert {:ok, _} = parse("++strong++ +med+ ~moderate~ -reduced-")
+
     # # unsupported markup
     assert {:ok, _} = parse("")
     assert {:ok, _} = parse(" ")
@@ -36,7 +40,9 @@ defmodule SpeechMarkdown.Grammar.Test do
     # say-as
     assert {:ok, _} = parse("(www)[ characters]")
     assert {:ok, _} = parse("(1234)[number ]")
-    assert {:ok, _} = parse("![\"http://audio.mp3\"]") |> IO.inspect(label: "a")
+    assert {:ok, _} = parse("![\"http://audio.mp3\"]")
+    assert {:ok, _} = parse("[\"aluminum\"]")
+    assert {:ok, _} = parse("(Al)[\"aluminum\"]")
 
     assert parse(
              "hello [bla] there [x:\"bar\"] and (foo [300ms] (d)[x] apentuin)[foo:\"bar\";lang:\"nl\"] that is it\n\n#[foo]\nxxx"

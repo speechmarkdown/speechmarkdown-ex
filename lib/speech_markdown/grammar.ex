@@ -122,6 +122,8 @@ defmodule SpeechMarkdown.Grammar do
     ignore(string("["))
     |> optional(space)
     |> choice([
+      single_quoted |> unwrap_and_tag(:sub),
+      double_quoted |> unwrap_and_tag(:sub),
       ipa,
       parsec(:keyvalue) |> reduce(:kv_block),
       identifier |> unwrap_and_tag(:block)
@@ -144,15 +146,47 @@ defmodule SpeechMarkdown.Grammar do
     kv_block1(rest, [{k, v} | acc])
   end
 
-  text =
+  plaintext =
     utf8_char([{:not, ?[}, {:not, ?)}])
     |> reduce(:to_string)
     |> unwrap_and_tag(:text)
 
+  emphasized = fn abbrev, emphasis ->
+    <<char, _::binary>> = abbrev
+
+    ignore(string(abbrev))
+    |> repeat(utf8_char([{:not, char}]))
+    |> reduce(:to_string)
+    |> ignore(string(abbrev))
+    |> reduce({:short_emphasis, [emphasis]})
+  end
+
+  defparsec(
+    :any_emphasis,
+    choice([
+      emphasized.("++", "strong"),
+      emphasized.("+", "moderate"),
+      emphasized.("~", "none"),
+      emphasized.("-", "reduced")
+    ])
+  )
+
   defparsec(
     :document,
-    choice([section, audio, parenthesized, parsec(:block), text])
+    choice([
+      parsec(:any_emphasis),
+      section,
+      audio,
+      parenthesized,
+      parsec(:block),
+      plaintext
+    ])
+    # choice([section, audio, parenthesized, parsec(:block), strong, plaintext])
     |> repeat()
     |> reduce(:merge)
   )
+
+  defp short_emphasis(text, emphasis) do
+    {:nested_block, [text: text], {:kv_block, [{"emphasis", emphasis}]}}
+  end
 end

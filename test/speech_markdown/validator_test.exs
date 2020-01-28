@@ -22,10 +22,17 @@ defmodule SpeechMarkdown.ValidatorTest do
       parse("""
       hello [200ms] there [lang:"NL"]
 
+      I would walk (500 mi)[unit]
+
       (word)[bleep]
 
       You say, (pecan)[ipa:"pɪˈkɑːn"].
       I say, (pecan)[/ˈpi.kæn/].
+
+      I can speak with my normal pitch, (but also with a much higher pitch)[pitch:"x-high"].
+
+      (Louder volume for the second sentence)[volume:"x-loud"].
+
 
       and (foo [300ms] (d)[address]
 
@@ -43,6 +50,15 @@ defmodule SpeechMarkdown.ValidatorTest do
       In Paris, they pronounce it (Paris)[lang:"fr-FR"].
 
       When I wake up, (I speak quite slowly)[rate:"x-slow"].
+
+      My favorite chemical element is (Al)[sub:"aluminum"],
+      but Al prefers (Mg)["magnesium"].
+
+      A ++strong++ level
+      A +moderate+ level
+      A ~none~ level
+      A -reduced- level
+
 
       """)
 

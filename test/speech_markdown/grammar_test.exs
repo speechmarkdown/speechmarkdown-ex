@@ -8,15 +8,15 @@ defmodule SpeechMarkdown.Grammar.Test do
     assert {:ok, _} = parse("")
     assert {:ok, _} = parse(" ")
     assert {:ok, _} = parse("(")
-    #    assert {:ok, _} = parse(")")
-    #   assert {:ok, _} = parse("[")
+    assert {:ok, _} = parse(")")
+    assert {:ok, _} = parse("[")
     assert {:ok, _} = parse("]")
     assert {:ok, _} = parse("()[]")
     assert {:ok, _} = parse("[invalid]")
-    # assert {:ok, _} = parse("[break:]")
+    assert {:ok, _} = parse("[break:]")
     assert {:ok, _} = parse("[5m]")
-    # assert {:ok, _} = parse("(pecan)[ipa:]")
-    # assert {:ok, _} = parse("(pecan)[/]")
+    assert {:ok, _} = parse("(pecan)[ipa:]")
+    assert {:ok, _} = parse("(pecan)[/]")
     assert {:ok, _} = parse("(Al)[sub:\"aluminum;\"]")
 
     assert {:ok, _} = parse("[/pɪˈkɑːn/]")
@@ -43,7 +43,7 @@ defmodule SpeechMarkdown.Grammar.Test do
 
   test "large test case" do
     assert parse(
-             "hello [bla] there [x:\"bar\"] and (foo [300ms] (d)[x] apentuin)[foo:\"bar\";lang:\"nl\"] that is it\n\n#[foo]\nxxx"
+             "hello [400ms] xxx  [bla;bar;x:\"d\";\"dd\"] there [x:\"bar\"] and (foo [300ms] (d)[x] apentuin)[foo:\"bar\";lang:\"nl\"] that is it\n\n#[foo]\nxxx"
            )
 
     #           |> IO.inspect(label: "x")
@@ -88,5 +88,10 @@ defmodule SpeechMarkdown.Grammar.Test do
     """
 
     assert [text: _] = parse!(text)
+  end
+
+  test "modifier" do
+    text = "(hallo)[lang:\"NL\"]"
+    assert [{:modifier, "hallo", [{:lang, "NL"}]}] = parse!(text)
   end
 end

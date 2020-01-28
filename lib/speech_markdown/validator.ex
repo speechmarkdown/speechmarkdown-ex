@@ -1,6 +1,13 @@
 defmodule SpeechMarkdown.Validator do
-  @blocks ~w(address cardinal number characters expletive fraction interjection ordinal phone telephone unit whisper emphasis excited disappointed)
-  @attributes ~w(break date time emphasis lang voice pitch ipa sub disappointed excited)
+  @attributes ~w(break date time emphasis lang voice pitch ipa sub disappointed excited address cardinal number characters expletive fraction interjection ordinal telephone unit whisper emphasis excited disappointed dj newscaster)a
+
+  @aliases %{
+    vol: :volume,
+    bleep: :expletive,
+    phone: :telephone,
+    chars: :characters
+  }
+  @alias_keys Map.keys(@aliases)
 
   @enum_attrs [
     rate: ~w(x-slow slow medium fast x-fast),
@@ -8,6 +15,13 @@ defmodule SpeechMarkdown.Validator do
     emphasis: ~w(strong moderate none reduced),
     pitch: ~w(x-low low medium high x-high)
   ]
+
+  @attr_defaults %{
+    rate: "medium",
+    volume: "medium",
+    emphasis: "none",
+    pitch: "medium"
+  }
 
   @delay_re ~r/^(\d+)\s*(ms|sec|day|month|year|y|m|s|h|hour|hours)$/
   @delay_enum ~w(none x-weak weak medium strong x-strong)
@@ -44,18 +58,15 @@ defmodule SpeechMarkdown.Validator do
     {:ok, node}
   end
 
-  defp validate_node({:nested_block, nodes, node}) do
-    with {:ok, node} <- convert_nested(node),
-         {:ok, new_nodes} <- validate(nodes) do
-      {:ok, {:nested_block, new_nodes, node}}
+  defp validate_node({:modifier, text, kvs}) do
+    with {:ok, kvs} <- validate_kvs(kvs) do
+      {:ok, {:modifier, text, kvs}}
     end
   end
 
-  defp validate_node({:block, <<x, _::binary>> = break})
-       when x >= ?0 and x <= ?9 do
-    # validate break
+  defp validate_node({:block, [break: break]} = node) do
     with :ok <- valid_delay(break) do
-      {:ok, {:kv_block, [{"break", break}]}}
+      {:ok, node}
     end
   end
 
@@ -63,24 +74,14 @@ defmodule SpeechMarkdown.Validator do
     {:error, {:invalid_toplevel_block, block}}
   end
 
-  defp validate_node({:kv_block, kvs}) do
-    with {:ok, kvs1} <- validate_kvs(kvs) do
-      {:ok, {:kv_block, kvs1}}
-    end
-  end
-
-  defp validate_node({:section, {:kv_block, kvs}}) do
-    with {:ok, kvs1} <- validate_kvs(kvs) do
-      {:ok, {:section, kvs1}}
-    end
-  end
-
-  defp validate_node({:section, {:block, "defaults"}}) do
+  defp validate_node({:section, [defaults: nil]}) do
     {:ok, {:section, nil}}
   end
 
-  defp validate_node({:section, {:block, value}}) do
-    {:ok, {:section, value}}
+  defp validate_node({:section, kvs}) do
+    with {:ok, kvs} <- validate_kvs(kvs) do
+      {:ok, {:section, kvs}}
+    end
   end
 
   defp validate_node(node) do
@@ -104,13 +105,17 @@ defmodule SpeechMarkdown.Validator do
   end
 
   for {attr, enum} <- @enum_attrs do
-    defp validate_kvs([{unquote(Atom.to_string(attr)), value} = kv | rest], acc)
+    defp validate_kvs([{unquote(attr), value} = kv | rest], acc)
          when value in unquote(enum) do
       validate_kvs(rest, [kv | acc])
     end
 
+    defp validate_kvs([{unquote(attr) = k, nil} | rest], acc) do
+      validate_kvs(rest, [{k, @attr_defaults[k]} | acc])
+    end
+
     defp validate_kvs(
-           [{unquote(Atom.to_string(attr)), value} | _rest],
+           [{unquote(attr), value} | _rest],
            _acc
          ) do
       {:error,
@@ -118,18 +123,18 @@ defmodule SpeechMarkdown.Validator do
     end
   end
 
-  defp validate_kvs([{"vol", value} | rest], acc) do
-    validate_kvs([{"volume", value} | rest], acc)
-  end
-
-  defp validate_kvs([{"break", break} | rest], acc) do
+  defp validate_kvs([{:break, break} = n | rest], acc) do
     with :ok <- valid_delay(break) do
-      validate_kvs(rest, [{"break", break} | acc])
+      validate_kvs(rest, [n | acc])
     end
   end
 
   defp validate_kvs([{k, _v} = kv | rest], acc) when k in @attributes do
     validate_kvs(rest, [kv | acc])
+  end
+
+  defp validate_kvs([{k, v} | rest], acc) when k in @alias_keys do
+    validate_kvs([{@aliases[k], v} | rest], acc)
   end
 
   defp validate_kvs([{k, _v} | _rest], _acc) do
@@ -144,55 +149,6 @@ defmodule SpeechMarkdown.Validator do
     case Regex.match?(@delay_re, break) do
       true -> :ok
       false -> {:error, {:invalid_delay, break}}
-    end
-  end
-
-  defp convert_nested({:block, "emphasis"}) do
-    {:ok, {:kv_block, [{"emphasis", "moderate"}]}}
-  end
-
-  defp convert_nested({:block, "pitch"}) do
-    {:ok, {:kv_block, [{"pitch", "medium"}]}}
-  end
-
-  defp convert_nested({:block, "rate"}) do
-    {:ok, {:kv_block, [{"rate", "medium"}]}}
-  end
-
-  defp convert_nested({:block, v}) when v in ~w(vol volume) do
-    {:ok, {:kv_block, [{"volume", "medium"}]}}
-  end
-
-  defp convert_nested({:block, block}) when block in @blocks do
-    {:ok, {:block, block}}
-  end
-
-  @translate_blocks %{"chars" => "characters", "bleep" => "expletive"}
-  @translate_block_header Map.keys(@translate_blocks)
-
-  defp convert_nested({:block, block}) when block in @translate_block_header do
-    {:ok, {:block, @translate_blocks[block]}}
-  end
-
-  defp convert_nested({:block, block}) do
-    {:error, {:invalid_block, block}}
-  end
-
-  defp convert_nested({:ipa, ipa}) do
-    {:ok, {:kv_block, [{"ipa", ipa}]}}
-  end
-
-  defp convert_nested({:sub, sub}) do
-    {:ok, {:kv_block, [{"sub", sub}]}}
-  end
-
-  defp convert_nested(:empty_block) do
-    {:ok, :empty_block}
-  end
-
-  defp convert_nested({:kv_block, kvs}) do
-    with {:ok, kvs1} <- validate_kvs(kvs) do
-      {:ok, {:kv_block, kvs1}}
     end
   end
 

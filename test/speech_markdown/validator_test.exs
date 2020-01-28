@@ -9,18 +9,18 @@ defmodule SpeechMarkdown.ValidatorTest do
 
     assert {:ok, _} =
              validate([
-               {:nested_block, [text: "address"], {:block, "address"}}
+               {:modifier, "address", [{:address, nil}]}
              ])
   end
 
   test "validate breaks" do
-    assert {:ok, _} = validate([{:block, "200ms"}])
+    assert {:ok, _} = validate([{:block, [break: "200ms"]}])
   end
 
   test "validate a large AST" do
     {:ok, ast} =
       parse("""
-      hello [200ms] there [lang:"NL"]
+      hello [200ms] there (daar)[lang:"NL"]
 
       I would walk (500 mi)[unit]
 
@@ -34,13 +34,16 @@ defmodule SpeechMarkdown.ValidatorTest do
       (Louder volume for the second sentence)[volume:"x-loud"].
 
 
-      and (foo [300ms] (d)[address]
+      and foo [300ms] (d)[address]
 
       [break:"weak"]
       (lala)[emphasis]
       (lala)[emphasis:"strong"]
 
-      apentuin)[voice:"James";lang:"nl"] that is it\n\n#[voice:"x"] \nxxx
+      apentuin
+      #[voice:"James";lang:"nl"]
+
+      that is it\n\n#[voice:"x"] \nxxx
 
       !["audio.mp3"]
 
@@ -62,7 +65,7 @@ defmodule SpeechMarkdown.ValidatorTest do
 
       """)
 
-    # IO.inspect(ast, label: "ast")
+    IO.inspect(ast, label: "ast")
 
     assert {:ok, _} = validate(ast)
   end

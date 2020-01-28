@@ -56,9 +56,8 @@ defmodule SpeechMarkdown.Grammar do
   # --------------------------------------------------------------------------
   # helpers
   # --------------------------------------------------------------------------
-  # FIXME whitespace
+
   space = ignore(repeat(ascii_char('\r\n\s\t')))
-  non_ws_char = utf8_char([9, 10, 11, 12, 13, 32] |> Enum.map(&{:not, &1}))
 
   identifier =
     reduce(
@@ -94,7 +93,7 @@ defmodule SpeechMarkdown.Grammar do
   section =
     ignore(string("#"))
     |> parsec(:block)
-    |> unwrap_and_tag(:section)
+    |> reduce(:finalize_section)
 
   audio =
     ignore(string("!["))
@@ -106,13 +105,15 @@ defmodule SpeechMarkdown.Grammar do
     :empty_block
   end
 
-  parenthesized =
+  defparsec(
+    :modifier,
     ignore(string("("))
     |> reduce(repeat(utf8_char([{:not, ?)}])), :to_string)
-    #    |> concat(parsec(:document))
+    # |> concat(parsec(:document))
     |> ignore(string(")"))
     |> choice([parsec(:block), string("[]") |> reduce(:empty_block)])
-    |> reduce(:nested_block)
+    |> reduce(:finalize_modifier)
+  )
 
   ipa =
     ignore(string("/"))
@@ -123,38 +124,62 @@ defmodule SpeechMarkdown.Grammar do
   # --------------------------------------------------------------------------
   # breaks
   # --------------------------------------------------------------------------
+
+  defparsec(
+    :block_inner,
+    choice([
+      single_quoted |> unwrap_and_tag(:sub),
+      double_quoted |> unwrap_and_tag(:sub),
+      ipa,
+      identifier
+      |> optional(
+        ignore(string(":"))
+        |> choice([single_quoted, double_quoted])
+      )
+      |> tag(:i)
+    ])
+    |> optional(ignore(string(";")))
+  )
+
   defparsec(
     :block,
     ignore(string("["))
     |> optional(space)
-    |> choice([
-      single_quoted |> unwrap_and_tag(:sub),
-      double_quoted |> unwrap_and_tag(:sub),
-      ipa,
-      parsec(:keyvalue) |> reduce(:kv_block),
-      identifier |> unwrap_and_tag(:block)
-    ])
+    |> parsec(:block_inner)
+    |> repeat(parsec(:block_inner))
+    |> reduce(:finalize_block)
     |> optional(space)
     |> ignore(string("]"))
   )
 
-  def nested_block([a, b]) do
-    {:nested_block, [{:text, a}], b}
+  defp finalize_block(b) do
+    {:block,
+     Enum.map(
+       b,
+       fn
+         {:i, [<<x, _::binary>> = v]} when x >= ?0 and x <= ?9 -> {:break, v}
+         {:i, [k]} -> {String.to_atom(k), nil}
+         {:i, [k, v]} -> {String.to_atom(k), v}
+         {:ipa, v} -> {:ipa, v}
+         {:sub, v} -> {:sub, v}
+       end
+     )}
   end
 
-  def kv_block(x) do
-    {:kv_block, kv_block1(x, [])}
+  defp finalize_modifier(["", :empty_block]) do
+    []
   end
 
-  def kv_block1([], acc), do: acc
+  defp finalize_modifier([text, {:block, block}]) do
+    {:modifier, text, block}
+  end
 
-  def kv_block1([k, v | rest], acc) do
-    kv_block1(rest, [{k, v} | acc])
+  defp finalize_section([{:block, block}]) do
+    {:section, block}
   end
 
   @ws [9, 10, 11, 12, 13, 32]
   ws = ascii_char(@ws)
-  non_ws = utf8_char(@ws |> Enum.map(&{:not, &1}))
 
   non_ctrl_instr =
     utf8_char((@ws ++ [?), ?], ?[, ?(, 35, ?!]) |> Enum.map(&{:not, &1}))
@@ -192,19 +217,19 @@ defmodule SpeechMarkdown.Grammar do
   defparsec(
     :document,
     choice([
-      parenthesized,
+      parsec(:modifier),
       section,
       audio,
       parsec(:block),
       parsec(:any_emphasis),
       plaintext
     ])
-    # choice([section, audio, parenthesized, parsec(:block), strong, plaintext])
+    # choice([section, audio, modifier, parsec(:block), strong, plaintext])
     |> repeat()
     |> reduce(:merge)
   )
 
   defp short_emphasis([text], emphasis) do
-    {:nested_block, [text: text], {:kv_block, [{"emphasis", emphasis}]}}
+    {:modifier, text, [emphasis: emphasis]}
   end
 end

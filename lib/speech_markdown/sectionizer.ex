@@ -1,4 +1,6 @@
 defmodule SpeechMarkdown.Sectionizer do
+  @moduledoc false
+
   def sectionize(ast) do
     {:ok,
      Enum.reduce(ast, [{nil, []}], &sectionize_node/2)

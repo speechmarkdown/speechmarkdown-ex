@@ -4,6 +4,10 @@ defmodule SpeechMarkdown do
 
   https://www.speechmarkdown.org/
 
+  The Speech Markdown transpiler converts the markdown text to the
+  Speech Synthesis Markup Language (SSML) format. The results are
+  returned as an SSML string.
+
   """
 
   alias SpeechMarkdown.Grammar
@@ -40,7 +44,7 @@ defmodule SpeechMarkdown do
   end
 
   @doc """
-  Convert the given Speech Markdown into plain text
+  Convert the given Speech Markdown into plain text.
   """
   def to_plaintext(input) do
     with {:ok, parsed} <- Grammar.parse(input) do

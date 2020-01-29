@@ -1,5 +1,12 @@
 defmodule SpeechMarkdown.Validator do
-  @attributes ~w(break date time emphasis lang voice pitch ipa sub disappointed excited address cardinal number characters expletive fraction interjection ordinal telephone unit whisper emphasis excited disappointed dj newscaster)a
+  @moduledoc false
+
+  @attributes ~w(
+    address break cardinal characters date disappointed disappointed
+    dj emphasis emphasis excited excited expletive fraction
+    interjection ipa lang newscaster number ordinal pitch sub
+    telephone time unit voice whisper
+  )a
 
   @aliases %{
     vol: :volume,
@@ -51,6 +58,11 @@ defmodule SpeechMarkdown.Validator do
       {:ok, Enum.reverse(nodes)}
     end
   end
+
+  def break_attr(type) when type in @delay_enum, do: :strength
+  def break_attr(_type), do: :time
+
+  ###
 
   defp validate_node({:text, _} = node) do
     {:ok, node}
@@ -155,7 +167,4 @@ defmodule SpeechMarkdown.Validator do
       false -> {:error, {:invalid_delay, break}}
     end
   end
-
-  def break_attr(type) when type in @delay_enum, do: :strength
-  def break_attr(_type), do: :time
 end

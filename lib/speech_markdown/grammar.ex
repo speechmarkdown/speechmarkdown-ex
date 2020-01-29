@@ -1,20 +1,5 @@
 defmodule SpeechMarkdown.Grammar do
-  @moduledoc """
-  This is the nimble-parsec grammar for the subset of the Speech Markdown
-  language supported by this library. The parser is tolerant of any string
-  inputs, but poorly-specified constructs will simply be output as string
-  values. Results are returned as an ast containing a list of tagged tokens,
-  like so:
-
-    iex> parse!("You say pecan [200ms], I say (pecan)[/pɪˈkɑːn/]")
-    [
-      text: "You say pecan ",
-      break: [200, :ms],
-      text: ", I say ",
-      modifier: ["pecan", {:ipa, "pɪˈkɑːn"}]
-    ]
-
-  """
+  @moduledoc false
 
   import NimbleParsec
 

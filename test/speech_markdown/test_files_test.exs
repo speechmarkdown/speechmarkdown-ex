@@ -7,9 +7,9 @@ defmodule SpeechMarkdown.TestFilesTest.Helper do
     {
       File.read!(base <> ".smd") |> String.trim(),
       # |> String.replace("\n", ""),
-      n(File.read!(base <> ".alexa.ssml")),
+      File.read!(base <> ".alexa.ssml"),
       # |> String.replace("\n", ""),
-      n(File.read!(base <> ".google.ssml")),
+      File.read!(base <> ".google.ssml"),
       File.read!(base <> ".txt") |> String.trim()
     }
   end
@@ -19,29 +19,19 @@ defmodule SpeechMarkdown.TestFilesTest.Helper do
   end
 
   @doc """
-  Normalize the output
+  XML assertion; generated XML might be semantically
+  identical but different in string presentation; e.g. regarding
+  ordering of element attributes.
   """
-  def n({:ok, result}) do
-    {:ok, n(result)}
-  end
-
-  def n(result) do
-    result = Regex.replace(~r/\n/, result, "")
-    Regex.replace(~r/\s+/, result, " ")
-  end
 
   defmacro assert_xml({:==, _, [a, b]}) do
     quote do
       import BubbleLib.XML
 
-      if unquote(a) !== unquote(b) do
-        parse_a = xml_parse(unquote(a))
-        parse_b = xml_parse(unquote(b))
+      parse_a = xml_parse(unquote(a))
+      parse_b = xml_parse(unquote(b))
 
-        assert parse_a === parse_b
-      else
-        assert unquote(a) === unquote(b)
-      end
+      assert parse_a === parse_b
     end
   end
 end
@@ -58,19 +48,21 @@ defmodule SpeechMarkdown.TestFilesTest do
     {smd, alexa, google, txt} =
       SpeechMarkdown.TestFilesTest.Helper.fixture(testcase)
 
-    test "#{testcase} - Alexa" do
-      assert {:ok, result} = to_ssml(unquote(smd), variant: :alexa)
-      assert_xml(unquote(alexa) == n(result))
-    end
+    describe "#{testcase}" do
+      test "Alexa" do
+        assert {:ok, result} = to_ssml(unquote(smd), variant: :alexa)
+        assert_xml(unquote(alexa) == result)
+      end
 
-    test "#{testcase} - Google Assistant" do
-      assert {:ok, result} = to_ssml(unquote(smd), variant: :google)
-      assert_xml(unquote(google) == result)
-    end
+      test "Google Assistant" do
+        assert {:ok, result} = to_ssml(unquote(smd), variant: :google)
+        assert_xml(unquote(google) == result)
+      end
 
-    test "#{testcase} - plain text" do
-      assert {:ok, result} = to_plaintext(unquote(smd))
-      assert unquote(txt) == result
+      test "Plain text" do
+        assert {:ok, result} = to_plaintext(unquote(smd))
+        assert unquote(txt) == result
+      end
     end
   end
 end

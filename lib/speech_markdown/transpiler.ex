@@ -1,28 +1,7 @@
 defmodule SpeechMarkdown.Transpiler do
-  @moduledoc """
-  The Speech Markdown transpiler converts the markdown text to the
-  Speech Synthesis Markup Language (SSML) format. The results are returned
-  as an SSML string.
-  """
+  @moduledoc false
 
-  alias SpeechMarkdown.{Grammar, Validator, Transpiler.Alexa}
-
-  @doc "convert a markdown string or ast to ssml text"
-  @spec transpile!([Grammar.node()], SpeechMarkdown.options()) ::
-          String.t()
-  def transpile!(ast, options) do
-    {:ok, xml} = transpile(ast, options)
-    xml
-  end
-
-  @doc "convert a markdown string or ast to ssml text"
-  @spec transpile(text :: String.t() | keyword(), SpeechMarkdown.options()) ::
-          {:ok, String.t()}
-  def transpile(text, options) when is_binary(text) do
-    with {:ok, ast} <- Grammar.parse(text) do
-      transpile(ast, options)
-    end
-  end
+  alias SpeechMarkdown.{Validator, Transpiler.Alexa}
 
   def transpile(ast, options) do
     xml_declaration = Keyword.get(options, :xml_declaration, false)
@@ -49,13 +28,6 @@ defmodule SpeechMarkdown.Transpiler do
     end
   end
 
-  ### EMPTY BLOCK
-  defp convert({:nested_block, nodes, :empty_block}, variant) do
-    Enum.map(nodes, &convert(&1, variant))
-  end
-
-  ### SECTIONS
-
   defp convert({:section, modifier_keys, nodes}, variant) do
     inner = Enum.map(nodes, &convert(&1, variant))
 
@@ -74,7 +46,7 @@ defmodule SpeechMarkdown.Transpiler do
   ### TEXT
 
   defp convert({:text, text}, _variant) do
-    ch(text)
+    ch(String.trim_leading(text, "\n"))
   end
 
   defp opt_strip_declaration("<?xml version=\"1.0\"?>" <> rest, false), do: rest
@@ -87,7 +59,7 @@ defmodule SpeechMarkdown.Transpiler do
       |> IO.chardata_to_string()
       |> String.trim()
 
-    {:ok, Regex.replace(~r/(\s)\s+/, output, "\\1")}
+    {:ok, Regex.replace(~r/\s+?(\s)/, output, "\\1")}
   end
 
   defp plaintext_node({:text, text}) do
@@ -104,7 +76,7 @@ defmodule SpeechMarkdown.Transpiler do
 
   defdelegate ch(s), to: Kernel, as: :to_charlist
 
-  def filter_duplicate_say_as(modifier_keys, spec) do
+  defp filter_duplicate_say_as(modifier_keys, spec) do
     modifier_keys
     |> Enum.map(fn {k, v} -> {{k, v}, Enum.find(spec, &(elem(&1, 0) == k))} end)
     |> reduce_duplicate_say_as([])
@@ -201,13 +173,6 @@ defmodule SpeechMarkdown.Transpiler do
   defp combine_elements(other, _) do
     other
   end
-
-  @ws [9, 10, 11, 12, 13, 32]
-  defp trim_initial_ws([[ch | rest] | nodes]) when ch in @ws do
-    trim_initial_ws([rest | nodes])
-  end
-
-  defp trim_initial_ws(nodes), do: nodes
 
   def get_spec(:google) do
     (get_spec(:general)

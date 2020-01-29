@@ -18,13 +18,14 @@ defmodule SpeechMarkdown.Validator do
   @delay_re ~r/^(\d+)\s*(ms|sec|day|month|year|y|m|s|h|hour|hours)$/
   @delay_enum ~w(none x-weak weak medium strong x-strong)
 
+  @spec validate(ast :: [term()]) :: :ok | {:error, any()}
   def validate(raw) when is_list(raw) do
     Enum.reduce(
       raw,
       :ok,
       fn
         node, :ok -> validate_node(node)
-        _, e -> e
+        _, {:error, e} -> {:error, e}
       end
     )
   end

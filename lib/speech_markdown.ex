@@ -4,9 +4,18 @@ defmodule SpeechMarkdown do
 
   https://www.speechmarkdown.org/
 
-  The Speech Markdown transpiler converts the markdown text to the
+  Speech Markdown is a text format which is akin to regular Markdown,
+  but with an alternative syntax and built for the purpose of
+  generating platform-specific
+  [SSML](https://en.wikipedia.org/wiki/Speech_Synthesis_Markup_Language)
+  markup.
+
+  The Speech Markdown transpiler converts the given Speeach Markdown text to the
   Speech Synthesis Markup Language (SSML) format. The results are
   returned as an SSML string.
+
+  Currently, SMD → SSML support is available for the Alexa and Google
+  Assistant dialects of SSML.
 
   """
 
@@ -16,7 +25,8 @@ defmodule SpeechMarkdown do
 
   @type option() ::
           {:xml_declaration, boolean()}
-          | {:variant, :google | :alexa | :plaintext}
+          | {:variant, :google | :alexa}
+          | {:validate, :strict | :loose}
 
   @doc """
   Convert the given Speech Markdown into SSML.
@@ -34,7 +44,9 @@ defmodule SpeechMarkdown do
     unknown attribute values; when `:loose`, such errors are ignored.
 
   """
-  def to_ssml(input, options \\ []) do
+  @spec to_ssml(input :: String.t(), options()) ::
+          {:ok, String.t()} | {:error, term()}
+  def to_ssml(input, options \\ []) when is_binary(input) do
     strict = Keyword.get(options, :validate, :strict) == :strict
 
     case strict do
@@ -55,7 +67,8 @@ defmodule SpeechMarkdown do
     end
   end
 
-  def to_ssml!(input, options \\ []) do
+  @spec to_ssml!(input :: String.t(), options()) :: String.t()
+  def to_ssml!(input, options \\ []) when is_binary(input) do
     {:ok, output} = to_ssml(input, options)
     output
   end
@@ -63,13 +76,16 @@ defmodule SpeechMarkdown do
   @doc """
   Convert the given Speech Markdown into plain text.
   """
-  def to_plaintext(input) do
+  @spec to_plaintext(input :: String.t()) ::
+          ssml :: {:ok, String.t()} | {:error, term()}
+  def to_plaintext(input) when is_binary(input) do
     with {:ok, parsed} <- Grammar.parse(input) do
       Transpiler.plaintext(parsed)
     end
   end
 
-  def to_plaintext!(input) do
+  @spec to_plaintext!(input :: String.t()) :: ssml :: String.t()
+  def to_plaintext!(input) when is_binary(input) do
     {:ok, output} = to_plaintext(input)
     output
   end

@@ -3,6 +3,7 @@ defmodule SpeechMarkdown.Transpiler do
 
   alias SpeechMarkdown.{Transpiler.Alexa, Validator}
 
+  @spec transpile(any(), any()) :: {:ok, String.t()}
   def transpile(ast, options) do
     xml_declaration = Keyword.get(options, :xml_declaration, false)
     variant = Keyword.get(options, :variant, :general)

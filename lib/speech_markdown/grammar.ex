@@ -13,7 +13,7 @@ defmodule SpeechMarkdown.Grammar do
   end
 
   @doc "parse a speech markdown string into an ast"
-  @spec parse(text :: String.t()) :: {:ok, keyword()}
+  @spec parse(text :: String.t()) :: {:ok, keyword()} | {:error, term()}
   def parse(text) do
     case document(text) do
       {:ok, [ast], "", _, _, _} ->
@@ -22,8 +22,8 @@ defmodule SpeechMarkdown.Grammar do
       {:ok, [_], rest, _, _, _} ->
         {:error, "Incomplete input near: " <> rest}
 
-      r ->
-        r
+      {:ok, _, _, _, _, _} ->
+        {:error, "Failed to parse"}
     end
   end
 

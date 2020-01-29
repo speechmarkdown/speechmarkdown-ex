@@ -28,13 +28,30 @@ defmodule SpeechMarkdown do
 
   - `variant` - Which SSML variant to choose from. Either `:alexa` or
     `:google`; defaults to `:alexa`, as Alexa has most SSML features.
+
+  - `validate` - `:strict` (default) or `:loose`; when strict, return
+    error when encountering invalid syntax, unknown attributes or
+    unknown attribute values; when `:loose`, such errors are ignored.
+
   """
   def to_ssml(input, options \\ []) do
-    with {:ok, parsed} <- Grammar.parse(input),
-         :ok <- Validator.validate(parsed) do
-      parsed
-      |> Sectionizer.sectionize()
-      |> Transpiler.transpile(options)
+    strict = Keyword.get(options, :validate, :strict) == :strict
+
+    case strict do
+      true ->
+        with {:ok, parsed} <- Grammar.parse(input),
+             :ok <- Validator.validate(parsed) do
+          parsed
+          |> Sectionizer.sectionize()
+          |> Transpiler.transpile(options)
+        end
+
+      false ->
+        with {:ok, parsed} <- Grammar.parse(input) do
+          parsed
+          |> Sectionizer.sectionize()
+          |> Transpiler.transpile(options)
+        end
     end
   end
 

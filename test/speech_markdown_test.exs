@@ -43,4 +43,39 @@ defmodule SpeechMarkdownTest do
                "text with ac"
     end
   end
+
+  describe "validation mode" do
+    test "default" do
+      assert {:error, _} = to_ssml("foo [bar]")
+      assert {:error, _} = to_ssml("foo (baz)[bar:\"bla\"]")
+    end
+
+    test ":strict" do
+      assert {:error, _} = to_ssml("foo [bar]", validate: :strict)
+      assert {:error, _} = to_ssml("foo (baz)[bar:\"bla\"]", validate: :strict)
+    end
+
+    test ":loose" do
+      assert {:ok, "<speak>foo </speak>"} =
+               to_ssml("foo [bar]", validate: :loose)
+
+      assert {:ok, "<speak>foo baz</speak>"} =
+               to_ssml("foo (baz)[bar:\"bla\"]", validate: :loose)
+
+      assert {:ok,
+              "<speak>foo <prosody volume=\"veryloud\">baz</prosody></speak>"} =
+               to_ssml(
+                 """
+                 foo (baz)[bar:"bla";volume:"veryloud"]
+                 """,
+                 validate: :loose
+               )
+
+      assert {:ok, "<speak>foo</speak>"} =
+               to_ssml("#[sectionbla]\nfoo", validate: :loose)
+
+      assert {:ok, "<speak>foo\n</speak>"} =
+               to_ssml("#[x;d;d:\"d\"]\nfoo\n#[another]", validate: :loose)
+    end
+  end
 end

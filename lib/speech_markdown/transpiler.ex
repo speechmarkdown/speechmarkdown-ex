@@ -37,16 +37,16 @@ defmodule SpeechMarkdown.Transpiler do
     end
   end
 
-  ### AUDIO
-
   defp convert({:audio, src}, _variant) do
     {:audio, [src: src], []}
   end
 
-  ### TEXT
-
   defp convert({:text, text}, _variant) do
     ch(String.trim_leading(text, "\n"))
+  end
+
+  defp convert(_unknown, _variant) do
+    []
   end
 
   defp opt_strip_declaration("<?xml version=\"1.0\"?>" <> rest, false), do: rest

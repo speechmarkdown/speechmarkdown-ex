@@ -1,6 +1,8 @@
 defmodule SpeechMarkdown.Grammar do
   @moduledoc false
 
+  import SpeechMarkdown.Normalizer, only: [normalize_block: 1]
+
   import NimbleParsec
 
   @doc "parse a speech markdown string into an ast"
@@ -149,6 +151,7 @@ defmodule SpeechMarkdown.Grammar do
          {:sub, v} -> {:sub, v}
        end
      )}
+    |> normalize_block()
   end
 
   defp finalize_modifier([text, :empty_block]) do
@@ -157,6 +160,10 @@ defmodule SpeechMarkdown.Grammar do
 
   defp finalize_modifier([text, {:block, block}]) do
     {:modifier, text, block}
+  end
+
+  defp finalize_section([{:block, [defaults: nil]}]) do
+    {:section, []}
   end
 
   defp finalize_section([{:block, block}]) do

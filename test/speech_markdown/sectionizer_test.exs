@@ -25,7 +25,9 @@ defmodule SpeechMarkdown.SectionizerTest do
     Now back to normal speech.
     """
 
-    {:ok, ast} = smd |> parse!() |> validate()
+    ast = smd |> parse!()
+
+    assert :ok = validate(ast)
 
     assert [{:text, _}, {:section, _, [{:text, _}]}, {:text, _}] =
              sectionize(ast)

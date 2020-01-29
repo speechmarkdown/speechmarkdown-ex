@@ -13,7 +13,7 @@ defmodule SpeechMarkdown.SectionizerTest do
     ]
 
     assert [{:text, "Hello"}, {:section, {:block, "excited"}, [text: "Hello"]}] =
-             sectionize!(ast)
+             sectionize(ast)
   end
 
   test "full sectionizer run" do
@@ -25,12 +25,9 @@ defmodule SpeechMarkdown.SectionizerTest do
     Now back to normal speech.
     """
 
-    ast =
-      smd
-      |> parse!()
-      |> validate!()
-      |> sectionize!()
+    {:ok, ast} = smd |> parse!() |> validate()
 
-    assert [{:text, _}, {:section, _, [{:text, _}]}, {:text, _}] = ast
+    assert [{:text, _}, {:section, _, [{:text, _}]}, {:text, _}] =
+             sectionize(ast)
   end
 end

@@ -35,27 +35,23 @@ defmodule SpeechMarkdown.Validator do
   @delay_re ~r/^(\d+)\s*(ms|sec|day|month|year|y|m|s|h|hour|hours)$/
   @delay_enum ~w(none x-weak weak medium strong x-strong)
 
-  def validate!(raw) when is_list(raw) do
-    {:ok, validated} = validate(raw)
-    validated
-  end
-
   def validate(raw) when is_list(raw) do
-    with {:ok, nodes} <-
-           Enum.reduce(
-             raw,
-             {:ok, []},
-             fn
-               node, {:ok, acc} ->
-                 with {:ok, n} <- validate_node(node) do
-                   {:ok, [n | acc]}
-                 end
+    Enum.reduce(
+      raw,
+      {:ok, []},
+      fn
+        node, {:ok, acc} ->
+          with {:ok, n} <- validate_node(node) do
+            {:ok, [n | acc]}
+          end
 
-               _, {:error, e} ->
-                 {:error, e}
-             end
-           ) do
-      {:ok, Enum.reverse(nodes)}
+        _, {:error, e} ->
+          {:error, e}
+      end
+    )
+    |> case do
+      {:ok, nodes} -> {:ok, Enum.reverse(nodes)}
+      e -> e
     end
   end
 

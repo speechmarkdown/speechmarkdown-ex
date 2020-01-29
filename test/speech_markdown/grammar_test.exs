@@ -96,22 +96,4 @@ defmodule SpeechMarkdown.Grammar.Test do
 
     #    |> IO.inspect(label: "x")
   end
-
-  test "section" do
-    text =
-      """
-      My voice and language is based on the device.
-      #[voice:"Kendra";lang:"en-US"]
-      Now I am speaking as Kendra from the US with a US accent.
-      #[voice:"Brian";lang:"en-US"]
-      Switching to Brian from the UK with a US accent.
-      #[voice:"device"]
-      Now back to the device setting.
-      """
-      |> String.trim()
-
-    parse!(text)
-    |> SpeechMarkdown.Validator.validate!()
-    |> SpeechMarkdown.Sectionizer.sectionize!()
-  end
 end

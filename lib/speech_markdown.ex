@@ -26,12 +26,15 @@ defmodule SpeechMarkdown do
   - `xml_declaration` - boolean to indicate whether we need the XML
     declaration in the output, default `false`
 
+  - `variant` - Which SSML variant to choose from. Either `:alexa` or
+    `:google`; defaults to `:alexa`, as Alexa has most SSML features.
   """
   def to_ssml(input, options \\ []) do
     with {:ok, parsed} <- Grammar.parse(input),
-         {:ok, validated} <- Validator.validate(parsed),
-         {:ok, sectionized} <- Sectionizer.sectionize(validated) do
-      Transpiler.transpile(sectionized, options)
+         {:ok, validated} <- Validator.validate(parsed) do
+      validated
+      |> Sectionizer.sectionize()
+      |> Transpiler.transpile(options)
     end
   end
 

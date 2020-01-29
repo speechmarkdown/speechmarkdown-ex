@@ -2,17 +2,11 @@ defmodule SpeechMarkdown.Sectionizer do
   @moduledoc false
 
   def sectionize(ast) do
-    {:ok,
-     Enum.reduce(ast, [{nil, []}], &sectionize_node/2)
-     |> reverse_last_section()
-     |> Enum.reverse()
-     |> Enum.map(&flatten_section/1)
-     |> List.flatten()}
-  end
-
-  def sectionize!(ast) do
-    {:ok, result} = sectionize(ast)
-    result
+    Enum.reduce(ast, [{nil, []}], &sectionize_node/2)
+    |> reverse_last_section()
+    |> Enum.reverse()
+    |> Enum.map(&flatten_section/1)
+    |> List.flatten()
   end
 
   defp reverse_last_section([{last, last_nodes} | rest]) do

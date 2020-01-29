@@ -10,10 +10,7 @@ defmodule SpeechMarkdown do
 
   """
 
-  alias SpeechMarkdown.Grammar
-  alias SpeechMarkdown.Validator
-  alias SpeechMarkdown.Sectionizer
-  alias SpeechMarkdown.Transpiler
+  alias SpeechMarkdown.{Grammar, Sectionizer, Transpiler, Validator}
 
   @type options() :: [option()]
 

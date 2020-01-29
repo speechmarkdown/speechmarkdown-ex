@@ -1,7 +1,7 @@
 defmodule SpeechMarkdown.Transpiler do
   @moduledoc false
 
-  alias SpeechMarkdown.{Validator, Transpiler.Alexa}
+  alias SpeechMarkdown.{Transpiler.Alexa, Validator}
 
   def transpile(ast, options) do
     xml_declaration = Keyword.get(options, :xml_declaration, false)

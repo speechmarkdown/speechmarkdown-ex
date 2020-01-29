@@ -1,4 +1,6 @@
 defmodule SpeechMarkdown.Transpiler.Alexa do
+  @moduledoc false
+
   defdelegate ch(s), to: String, as: :to_charlist
 
   @alexa_voices %{

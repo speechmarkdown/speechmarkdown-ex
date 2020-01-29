@@ -14,7 +14,7 @@ defmodule SpeechMarkdown.TestFilesTest.Helper do
     }
   end
 
-  def paths() do
+  def paths do
     Path.wildcard(@base <> "*") |> Enum.filter(&File.dir?/1)
   end
 
@@ -42,11 +42,10 @@ defmodule SpeechMarkdown.TestFilesTest do
   import SpeechMarkdown, only: [to_ssml: 2, to_plaintext: 1]
   import SpeechMarkdown.TestFilesTest.Helper
 
-  for path <- SpeechMarkdown.TestFilesTest.Helper.paths() do
+  for path <- paths() do
     testcase = Path.basename(path)
 
-    {smd, alexa, google, txt} =
-      SpeechMarkdown.TestFilesTest.Helper.fixture(testcase)
+    {smd, alexa, google, txt} = fixture(testcase)
 
     describe "#{testcase}" do
       test "Alexa" do

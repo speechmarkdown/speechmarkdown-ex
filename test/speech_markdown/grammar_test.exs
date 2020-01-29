@@ -42,11 +42,12 @@ defmodule SpeechMarkdown.Grammar.Test do
   end
 
   test "large test case" do
-    assert parse(
-             "hello [400ms] xxx  [bla;bar;x:\"d\";\"dd\"] there [x:\"bar\"] and (foo [300ms] (d)[x] apentuin)[foo:\"bar\";lang:\"nl\"] that is it\n\n#[foo]\nxxx"
-           )
-
-    #           |> IO.inspect(label: "x")
+    assert parse!("""
+           hello [400ms] xxx  [bla;bar;x:"d";"dd"] there [x:"bar"] and
+           (foo [300ms] (d)[x] apentuin)[foo:"bar";lang:"nl"] that is it
+           #[foo]
+           xxx
+           """)
   end
 
   test "emphasis" do

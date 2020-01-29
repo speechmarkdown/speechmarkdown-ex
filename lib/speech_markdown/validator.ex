@@ -27,10 +27,6 @@ defmodule SpeechMarkdown.Validator do
         _, e -> e
       end
     )
-    |> case do
-      {:ok, nodes} -> {:ok, Enum.reverse(nodes)}
-      e -> e
-    end
   end
 
   def break_attr(type) when type in @delay_enum, do: :strength
@@ -55,9 +51,7 @@ defmodule SpeechMarkdown.Validator do
   end
 
   defp validate_node({:section, kvs}) do
-    with {:ok, kvs} <- validate_kvs(kvs) do
-      {:ok, {:section, kvs}}
-    end
+    validate_kvs(kvs)
   end
 
   # defp validate_node({:section, [defaults: nil]}) do

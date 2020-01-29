@@ -35,189 +35,40 @@ defmodule SpeechMarkdown.Transpiler do
      |> opt_strip_declaration(xml_declaration)}
   end
 
+  defp convert({:break, break}, _variant) do
+    {:break, [{Validator.break_attr(break), break}], []}
+  end
+
+  defp convert({:modifier, inner, modifier_keys}, variant)
+       when is_binary(inner) do
+    inner = Enum.map([text: inner], &convert(&1, variant))
+
+    with {:ok, node} <-
+           variant |> get_spec() |> deduce_tags(modifier_keys, inner) do
+      node
+    end
+  end
+
   ### EMPTY BLOCK
   defp convert({:nested_block, nodes, :empty_block}, variant) do
     Enum.map(nodes, &convert(&1, variant))
   end
 
-  ### BREAK
-
-  defp convert({:kv_block, [{"break", break}]}, _variant) do
-    {:break, [{Validator.break_attr(break), break}], []}
-  end
-
-  ### IPA
-
-  defp convert(
-         {:nested_block, nodes, {:kv_block, [{"ipa", _ipa}]}},
-         :google
-       ) do
-    Enum.map(nodes, &convert(&1, :google))
-  end
-
-  defp convert(
-         {:nested_block, nodes, {:kv_block, [{"ipa", ipa}]}},
-         variant
-       ) do
-    {:phoneme, [alphabet: :ipa, ph: ch(ipa)],
-     Enum.map(nodes, &convert(&1, variant))}
-  end
-
   ### SECTIONS
 
-  defp convert({:section, [{_, _} | _] = attrs, nodes}, :alexa) do
-    {alexa_attrs, attrs} =
-      Enum.split_with(attrs, &(elem(&1, 0) in ~w(excited disappointed)))
+  defp convert({:section, modifier_keys, nodes}, variant) do
+    inner = Enum.map(nodes, &convert(&1, variant))
 
-    nodes
-    |> Enum.map(&convert(&1, :alexa))
-    |> wrap_with_voice_and_or_lang(attrs)
-    |> Alexa.emotion(alexa_attrs)
-    |> unwrap_single_node()
-  end
-
-  defp convert({:section, block, nodes}, :alexa) when is_binary(block) do
-    nodes
-    |> Enum.map(&convert(&1, :alexa))
-    |> Alexa.emotion(block)
-  end
-
-  defp convert({:section, _section, inner}, variant) do
-    Enum.map(inner, &convert(&1, variant))
-  end
-
-  @emotions Alexa.emotions()
-
-  defp convert({:nested_block, nodes, {:block, emotion} = block}, :alexa)
-       when emotion in @emotions do
-    nodes
-    |> Enum.map(&convert(&1, :alexa))
-    |> Alexa.emotion(block)
-  end
-
-  defp convert(
-         {:nested_block, nodes, {:kv_block, [{emotion, _}] = block}},
-         :alexa
-       )
-       when emotion in @emotions do
-    nodes
-    |> Enum.map(&convert(&1, :alexa))
-    |> Alexa.emotion(block)
-  end
-
-  defp convert({:nested_block, nodes, {:block, emotion}}, variant)
-       when emotion in @emotions do
-    Enum.map(nodes, &convert(&1, variant))
-  end
-
-  defp convert(
-         {:nested_block, nodes, {:kv_block, [{emotion, _}]}},
-         variant
-       )
-       when emotion in @emotions do
-    Enum.map(nodes, &convert(&1, variant))
-  end
-
-  ### WHISPER
-  defp convert({:nested_block, nodes, {:block, "whisper"}}, :alexa) do
-    nodes = Enum.map(nodes, &convert(&1, :alexa))
-    {:"amazon:effect", [name: 'whispered'], nodes}
-  end
-
-  defp convert({:nested_block, nodes, {:block, "whisper"}}, variant) do
-    nodes = Enum.map(nodes, &convert(&1, variant))
-    {:prosody, [volume: 'x-soft', rate: 'slow'], nodes}
-  end
-
-  ### PROSODY
-
-  defp convert(
-         {:nested_block, nodes, {:kv_block, [{"volume", volume}]}},
-         variant
-       ) do
-    {:prosody, [volume: volume], Enum.map(nodes, &convert(&1, variant))}
-  end
-
-  defp convert(
-         {:nested_block, nodes, {:kv_block, [{"pitch", pitch}]}},
-         variant
-       ) do
-    {:prosody, [pitch: pitch], Enum.map(nodes, &convert(&1, variant))}
-  end
-
-  defp convert(
-         {:nested_block, nodes, {:kv_block, [{"rate", rate}]}},
-         variant
-       ) do
-    {:prosody, [rate: rate], Enum.map(nodes, &convert(&1, variant))}
-  end
-
-  ### LANG
-
-  defp convert({:nested_block, nodes, {:kv_block, [{"lang", _}]}}, :google) do
-    Enum.map(nodes, &convert(&1, :google))
-  end
-
-  defp convert({:nested_block, nodes, {:kv_block, [{"lang", lang}]}}, variant) do
-    {:lang, ["xml:lang": ch(lang)], Enum.map(nodes, &convert(&1, variant))}
-  end
-
-  ### SUB
-
-  defp convert({:nested_block, nodes, {:kv_block, [{"sub", sub}]}}, variant) do
-    {:sub, [alias: ch(sub)], Enum.map(nodes, &convert(&1, variant))}
-  end
-
-  ### VOICE
-
-  defp convert({:nested_block, nodes, {:kv_block, [{"voice", voice}]}}, :alexa) do
-    nodes = Enum.map(nodes, &convert(&1, :alexa))
-
-    case Validator.alexa_voice(voice) do
-      nil ->
-        nodes
-
-      voice ->
-        {:voice, [name: ch(voice)], nodes}
+    with {:ok, node} <-
+           variant |> get_spec() |> deduce_tags(modifier_keys, inner) do
+      node
     end
-  end
-
-  defp convert({:nested_block, nodes, {:kv_block, [{"voice", _}]}}, variant) do
-    Enum.map(nodes, &convert(&1, variant))
-  end
-
-  ### SAY-AS
-  defp convert(
-         {:nested_block, nodes, {:kv_block, [{"emphasis", level}]}},
-         variant
-       ) do
-    {:emphasis, [level: ch(level)], Enum.map(nodes, &convert(&1, variant))}
-  end
-
-  defp convert(
-         {:nested_block, nodes, {:kv_block, [{dt, format}]}},
-         variant
-       )
-       when dt in ~w(date time) do
-    {:"say-as", ["interpret-as": ch(dt), format: ch(format)],
-     Enum.map(nodes, &convert(&1, variant))}
-  end
-
-  defp convert({:nested_block, nodes, {:block, say}}, :google)
-       when say in ~w(interjection) do
-    Enum.map(nodes, &convert(&1, :google))
-  end
-
-  @interpret_as ~w(characters number address chars expletive fraction interjection ordinal unit)
-  defp convert({:nested_block, nodes, {:block, say}}, variant)
-       when say in @interpret_as do
-    {:"say-as", ["interpret-as": say], Enum.map(nodes, &convert(&1, variant))}
   end
 
   ### AUDIO
 
   defp convert({:audio, src}, _variant) do
-    {:audio, [src: ch(src)], []}
+    {:audio, [src: src], []}
   end
 
   ### TEXT
@@ -234,6 +85,7 @@ defmodule SpeechMarkdown.Transpiler do
       ast
       |> Enum.map(&plaintext_node/1)
       |> IO.chardata_to_string()
+      |> String.trim()
 
     {:ok, Regex.replace(~r/(\s)\s+/, output, "\\1")}
   end
@@ -242,49 +94,206 @@ defmodule SpeechMarkdown.Transpiler do
     text
   end
 
-  defp plaintext_node({:nested_block, nodes, _}) do
-    nodes |> Enum.map(&plaintext_node/1)
+  defp plaintext_node({:modifier, text, _}) do
+    text
   end
 
-  defp plaintext_node({block, _}) when block in ~w(block kv_block audio)a do
+  defp plaintext_node(_) do
     []
   end
 
-  defdelegate ch(s), to: String, as: :to_charlist
+  defdelegate ch(s), to: Kernel, as: :to_charlist
 
-  defp wrap_with_voice_and_or_lang(nodes, attrs) do
-    ~w(lang voice)
-    |> Enum.reduce(nodes, fn
-      "lang", children ->
-        case kw(attrs, "lang") do
-          nil ->
-            children
-
-          lang ->
-            [{:lang, ["xml:lang": ch(lang)], children}]
-        end
-
-      "voice", children ->
-        case kw(attrs, "voice") do
-          nil ->
-            children
-
-          "device" ->
-            children
-
-          voice ->
-            [{:voice, [name: ch(voice)], children}]
-        end
-    end)
+  def filter_duplicate_say_as(modifier_keys, spec) do
+    modifier_keys
+    |> Enum.map(fn {k, v} -> {{k, v}, Enum.find(spec, &(elem(&1, 0) == k))} end)
+    |> reduce_duplicate_say_as([])
+    |> Enum.reverse()
+    |> Enum.map(&elem(&1, 0))
   end
 
-  defp unwrap_single_node([{_, _, _} = n]), do: n
-  defp unwrap_single_node(n), do: n
+  defp reduce_duplicate_say_as([last], acc) do
+    [last | acc]
+  end
 
-  defp kw(list, prop) do
-    case :proplists.get_value(prop, list) do
-      :undefined -> nil
-      value -> value
+  defp reduce_duplicate_say_as(
+         [{_, {_, :"say-as", _}}, {_, {_, :"say-as", _} = item} | rest],
+         acc
+       ) do
+    reduce_duplicate_say_as([item | rest], acc)
+  end
+
+  defp reduce_duplicate_say_as([item | rest], acc) do
+    reduce_duplicate_say_as(rest, [item | acc])
+  end
+
+  def deduce_tags(spec, modifier_keys, child_node) do
+    modifier_keys = filter_duplicate_say_as(modifier_keys, spec)
+
+    result =
+      spec
+      |> Enum.reverse()
+      |> Enum.reduce(child_node, fn
+        {key, tag, attr}, child_node ->
+          case Keyword.fetch(modifier_keys, key) do
+            {:ok, value} ->
+              tag =
+                {tag, [{attr, ch(value || key)}], as_child_nodes(child_node)}
+
+              tag_postprocess(key, value, tag)
+
+            :error ->
+              child_node
+          end
+      end)
+      |> combine_elements(modifier_keys)
+
+    {:ok, result}
+  end
+
+  defp as_child_nodes(text) when is_binary(text) do
+    [ch(text)]
+  end
+
+  defp as_child_nodes({_, _, _} = node) do
+    [node]
+  end
+
+  defp as_child_nodes(l) when is_list(l) do
+    l
+  end
+
+  defp combine_elements(
+         {:prosody, attrs, [{:prosody, attrs2, children}]},
+         ordering
+       ) do
+    # o =
+    #   ordering
+    #   |> Enum.filter(&(elem(&1, 0) in ~w(rate pitch volume)a))
+    #   |> Enum.map(&elem(&1, 0))
+
+    # lookup =
+    #   (attrs ++ attrs2)
+    #   |> IO.inspect(label: "aaa")
+    #   |> Map.new()
+    #   |> Map.take(~w(rate pitch volume)a)
+
+    # attrs =
+    #   o
+    #   |> Enum.map(&{&1, lookup[&1]})
+    #   |> Enum.reject(&(elem(&1, 1) == nil))
+    #   |> IO.inspect(label: "attrs")
+
+    combine_elements({:prosody, attrs ++ attrs2, children}, ordering)
+  end
+
+  defp combine_elements(
+         {:"say-as", attrs, [{:"say-as", attrs, children}]},
+         o
+       ) do
+    combine_elements({:"say-as", attrs, children}, o)
+  end
+
+  defp combine_elements({tag, attrs, children}, o) do
+    {tag, attrs, children |> Enum.map(&combine_elements(&1, o))}
+  end
+
+  defp combine_elements(other, _) do
+    other
+  end
+
+  @ws [9, 10, 11, 12, 13, 32]
+  defp trim_initial_ws([[ch | rest] | nodes]) when ch in @ws do
+    trim_initial_ws([rest | nodes])
+  end
+
+  defp trim_initial_ws(nodes), do: nodes
+
+  def get_spec(:google) do
+    (get_spec(:general)
+     |> Enum.reject(
+       &(elem(&1, 0) in ~w(ipa interjection disappointed excited dj newscaster whisper lang voice)a)
+     )) ++ [{:whisper, :prosody, :google}]
+  end
+
+  def get_spec(:alexa), do: get_spec(:general)
+
+  def get_spec(:general) do
+    [
+      {:dj, :"amazon:domain", :name},
+      {:newscaster, :"amazon:domain", :name},
+      {:voice, :voice, :name},
+      {:lang, :lang, :"xml:lang"},
+      {:disappointed, :"amazon:emotion", :name},
+      {:excited, :"amazon:emotion", :name},
+      {:ipa, :phoneme, :ph},
+      {:emphasis, :emphasis, :level},
+      {:date, :"say-as", :format},
+      {:time, :"say-as", :format},
+      {:unit, :"say-as", :"interpret-as"},
+      {:address, :"say-as", :"interpret-as"},
+      {:characters, :"say-as", :"interpret-as"},
+      {:ordinal, :"say-as", :"interpret-as"},
+      {:number, :"say-as", :"interpret-as"},
+      {:interjection, :"say-as", :"interpret-as"},
+      {:expletive, :"say-as", :"interpret-as"},
+      {:fraction, :"say-as", :"interpret-as"},
+      {:volume, :prosody, :volume},
+      {:pitch, :prosody, :pitch},
+      {:rate, :prosody, :rate},
+      {:whisper, :"amazon:effect", :name},
+      {:sub, :sub, :alias}
+    ]
+  end
+
+  defp tag_postprocess(:ipa, _, {t, a, v}) do
+    {t, [{:alphabet, 'ipa'} | a], v}
+  end
+
+  defp tag_postprocess(date_or_time, _, {t, a, v})
+       when date_or_time in ~w(date time)a do
+    {t, [{:"interpret-as", ch(date_or_time)} | a], v}
+  end
+
+  @intensities ~w(low medium high)
+  defp tag_postprocess(emotion, intensity, {tag, _, c})
+       when emotion in ~w(disappointed excited)a do
+    case String.downcase(intensity) do
+      i when i in @intensities ->
+        {tag, [name: emotion, intensity: ch(i)], c}
+
+      _ ->
+        c
     end
+  end
+
+  defp tag_postprocess(:dj, _, {tag, _, c}) do
+    {tag, [name: 'music'], c}
+  end
+
+  defp tag_postprocess(:newscaster, _, {tag, _, c}) do
+    {tag, [name: 'news'], c}
+  end
+
+  defp tag_postprocess(:whisper, _, {_, [google: _], c}) do
+    {:prosody, [volume: 'x-soft', rate: 'slow'], c}
+  end
+
+  defp tag_postprocess(:whisper, _, {tag, _, c}) do
+    {tag, [name: 'whispered'], c}
+  end
+
+  defp tag_postprocess(:voice, voice, {_tag, _, c}) do
+    case Alexa.lookup_voice(voice) do
+      nil ->
+        c
+
+      voice ->
+        {:voice, [name: ch(voice)], c}
+    end
+  end
+
+  defp tag_postprocess(_key, _value, tag) do
+    tag
   end
 end

@@ -166,8 +166,8 @@ defmodule SpeechMarkdown.Grammar do
      )}
   end
 
-  defp finalize_modifier(["", :empty_block]) do
-    []
+  defp finalize_modifier([text, :empty_block]) do
+    {:text, text}
   end
 
   defp finalize_modifier([text, {:block, block}]) do

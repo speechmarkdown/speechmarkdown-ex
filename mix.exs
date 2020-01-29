@@ -29,6 +29,7 @@ defmodule SpeechMarkdown.Mixfile do
       {:sweet_xml, "~> 0.6"},
       {:nimble_parsec, "~> 0.5"},
       {:excoveralls, "~> 0.11", only: :test},
+      {:bubble_lib, "~> 1.0", only: :test},
       {:credo, "~> 1.1", only: :dev, runtime: false},
       {:dialyxir, "~> 0.5", only: :dev, runtime: false},
       {:ex_doc, "~> 0.21", only: :dev, runtime: false}

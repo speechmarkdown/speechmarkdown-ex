@@ -65,7 +65,7 @@ defmodule SpeechMarkdown.ValidatorTest do
 
       """)
 
-    IO.inspect(ast, label: "ast")
+    #    IO.inspect(ast, label: "ast")
 
     assert {:ok, _} = validate(ast)
   end

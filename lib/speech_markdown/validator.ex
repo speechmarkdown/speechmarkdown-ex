@@ -19,8 +19,10 @@ defmodule SpeechMarkdown.Validator do
   @attr_defaults %{
     rate: "medium",
     volume: "medium",
-    emphasis: "none",
-    pitch: "medium"
+    emphasis: "moderate",
+    pitch: "medium",
+    excited: "medium",
+    disappointed: "medium"
   }
 
   @delay_re ~r/^(\d+)\s*(ms|sec|day|month|year|y|m|s|h|hour|hours)$/
@@ -64,9 +66,9 @@ defmodule SpeechMarkdown.Validator do
     end
   end
 
-  defp validate_node({:block, [break: break]} = node) do
+  defp validate_node({:block, [break: break]}) do
     with :ok <- valid_delay(break) do
-      {:ok, node}
+      {:ok, {:break, break}}
     end
   end
 
@@ -104,14 +106,16 @@ defmodule SpeechMarkdown.Validator do
     acc
   end
 
+  for {attr, value} <- @attr_defaults do
+    defp validate_kvs([{unquote(attr) = k, nil} | rest], acc) do
+      validate_kvs(rest, [{k, unquote(value)} | acc])
+    end
+  end
+
   for {attr, enum} <- @enum_attrs do
     defp validate_kvs([{unquote(attr), value} = kv | rest], acc)
          when value in unquote(enum) do
       validate_kvs(rest, [kv | acc])
-    end
-
-    defp validate_kvs([{unquote(attr) = k, nil} | rest], acc) do
-      validate_kvs(rest, [{k, @attr_defaults[k]} | acc])
     end
 
     defp validate_kvs(
@@ -154,39 +158,4 @@ defmodule SpeechMarkdown.Validator do
 
   def break_attr(type) when type in @delay_enum, do: :strength
   def break_attr(_type), do: :time
-
-  @alexa_voices %{
-                  "Ivy" => "en-US",
-                  "Joanna" => "en-US",
-                  "Joey" => "en-US",
-                  "Justin" => "en-US",
-                  "Kendra" => "en-US",
-                  "Kimberly" => "en-US",
-                  "Matthew" => "en-US",
-                  "Salli" => "en-US",
-                  "Nicole" => "en-AU",
-                  "Russell" => "en-AU",
-                  "Amy" => "en-GB",
-                  "Brian" => "en-GB",
-                  "Emma" => "en-GB",
-                  "Aditi" => "en-IN",
-                  "Raveena" => "en-IN",
-                  "Hans" => "de-DE",
-                  "Marlene" => "de-DE",
-                  "Vicki" => "de-DE",
-                  "Conchita" => "es-ES",
-                  "Enrique" => "es-ES",
-                  "Carla" => "it-IT",
-                  "Giorgio" => "it-IT",
-                  "Mizuki" => "ja-JP",
-                  "Takumi" => "ja-JP",
-                  "Celine" => "fr-FR",
-                  "Lea" => "fr-FR",
-                  "Mathieu" => "fr-FR"
-                }
-                |> Map.keys()
-
-  def alexa_voice(voice) do
-    Enum.find(@alexa_voices, &(String.downcase(&1) == String.downcase(voice)))
-  end
 end

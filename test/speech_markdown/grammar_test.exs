@@ -56,23 +56,18 @@ defmodule SpeechMarkdown.Grammar.Test do
 
     assert {:ok,
             [
-              {:nested_block, [text: "strong"],
-               {:kv_block, [{"emphasis", "strong"}]}}
+              {:modifier, "strong", [{:emphasis, "strong"}]}
             ]} = parse("++strong++")
 
     assert {:ok,
             [
-              {:nested_block, [text: "strong"],
-               {:kv_block, [{"emphasis", "strong"}]}},
+              {:modifier, "strong", [{:emphasis, "strong"}]},
               {:text, " "},
-              {:nested_block, [text: "med"],
-               {:kv_block, [{"emphasis", "moderate"}]}},
+              {:modifier, "med", [{:emphasis, "moderate"}]},
               {:text, " "},
-              {:nested_block, [text: "moderate"],
-               {:kv_block, [{"emphasis", "none"}]}},
+              {:modifier, "moderate", [{:emphasis, "none"}]},
               {:text, " "},
-              {:nested_block, [text: "reduced"],
-               {:kv_block, [{"emphasis", "reduced"}]}}
+              {:modifier, "reduced", [{:emphasis, "reduced"}]}
             ]} = parse("++strong++ +med+ ~moderate~ -reduced-")
   end
 
@@ -93,5 +88,11 @@ defmodule SpeechMarkdown.Grammar.Test do
   test "modifier" do
     text = "(hallo)[lang:\"NL\"]"
     assert [{:modifier, "hallo", [{:lang, "NL"}]}] = parse!(text)
+
+    parse!("""
+    Your balance is: (12345)[number;emphasis:"strong";whisper;pitch:"high"].
+    """)
+
+    #    |> IO.inspect(label: "x")
   end
 end

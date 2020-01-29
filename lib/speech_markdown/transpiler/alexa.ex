@@ -1,8 +1,47 @@
 defmodule SpeechMarkdown.Transpiler.Alexa do
   defdelegate ch(s), to: String, as: :to_charlist
 
-  @emotions ~w(excited disappointed)
+  @alexa_voices %{
+                  "Ivy" => "en-US",
+                  "Joanna" => "en-US",
+                  "Joey" => "en-US",
+                  "Justin" => "en-US",
+                  "Kendra" => "en-US",
+                  "Kimberly" => "en-US",
+                  "Matthew" => "en-US",
+                  "Salli" => "en-US",
+                  "Nicole" => "en-AU",
+                  "Russell" => "en-AU",
+                  "Amy" => "en-GB",
+                  "Brian" => "en-GB",
+                  "Emma" => "en-GB",
+                  "Aditi" => "en-IN",
+                  "Raveena" => "en-IN",
+                  "Hans" => "de-DE",
+                  "Marlene" => "de-DE",
+                  "Vicki" => "de-DE",
+                  "Conchita" => "es-ES",
+                  "Enrique" => "es-ES",
+                  "Carla" => "it-IT",
+                  "Giorgio" => "it-IT",
+                  "Mizuki" => "ja-JP",
+                  "Takumi" => "ja-JP",
+                  "Celine" => "fr-FR",
+                  "Lea" => "fr-FR",
+                  "Mathieu" => "fr-FR"
+                }
+                |> Map.keys()
+
+  def lookup_voice(voice) do
+    Enum.find(@alexa_voices, &(String.downcase(&1) == String.downcase(voice)))
+  end
+
+  @emotions ~w(excited disappointed)a
   @intensities ~w(x-low low medium high x-high)
+
+  def emotion(emotion, intensity, text) do
+    {:"amazon:emotion", [name: ch(emotion), intensity: ch(intensity)], text}
+  end
 
   def emotions(), do: @emotions
 

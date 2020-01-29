@@ -29,6 +29,21 @@ defmodule SpeechMarkdown.TestFilesTest.Helper do
     result = Regex.replace(~r/\n/, result, "")
     Regex.replace(~r/\s+/, result, " ")
   end
+
+  defmacro assert_xml({:==, _, [a, b]}) do
+    quote do
+      import BubbleLib.XML
+
+      if unquote(a) !== unquote(b) do
+        parse_a = xml_parse(unquote(a))
+        parse_b = xml_parse(unquote(b))
+
+        assert parse_a === parse_b
+      else
+        assert unquote(a) === unquote(b)
+      end
+    end
+  end
 end
 
 defmodule SpeechMarkdown.TestFilesTest do
@@ -45,16 +60,17 @@ defmodule SpeechMarkdown.TestFilesTest do
 
     test "#{testcase} - Alexa" do
       assert {:ok, result} = to_ssml(unquote(smd), variant: :alexa)
-      assert unquote(alexa) === n(result)
+      assert_xml(unquote(alexa) == n(result))
     end
 
     test "#{testcase} - Google Assistant" do
       assert {:ok, result} = to_ssml(unquote(smd), variant: :google)
-      assert unquote(google) === n(result)
+      assert_xml(unquote(google) == result)
     end
 
-    # test "#{testcase} - plain text" do
-    #   assert {:ok, unquote(txt)} === to_plaintext(unquote(smd))
-    # end
+    test "#{testcase} - plain text" do
+      assert {:ok, result} = to_plaintext(unquote(smd))
+      assert unquote(txt) == result
+    end
   end
 end

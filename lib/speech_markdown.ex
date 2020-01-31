@@ -20,7 +20,7 @@ defmodule SpeechMarkdown do
 
   """
 
-  alias SpeechMarkdown.{Grammar, Sectionizer, ParseError, Transpiler, Validator}
+  alias SpeechMarkdown.{Grammar, ParseError, Sectionizer, Transpiler, Validator}
 
   @type options() :: [option()]
 

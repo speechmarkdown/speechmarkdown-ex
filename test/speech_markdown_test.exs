@@ -2,6 +2,7 @@ defmodule SpeechMarkdownTest do
   use ExUnit.Case
 
   import SpeechMarkdown
+  alias SpeechMarkdown.ParseError
 
   describe "to_ssml" do
     test "to_ssml" do
@@ -37,7 +38,7 @@ defmodule SpeechMarkdownTest do
     test "to_plaintext" do
       assert to_plaintext!("text") === "text"
       assert to_plaintext!("text [200ms] with break") === "text with break"
-      # assert to_plaintext!("text with ++emphasis++") === "text with emphasis"
+      assert to_plaintext!("text with ++emphasis++") === "text with emphasis"
 
       assert to_plaintext!("text with (ac)[sub:\"alpha centauri\"]") ===
                "text with ac"
@@ -46,20 +47,38 @@ defmodule SpeechMarkdownTest do
 
   describe "validation mode" do
     test "default" do
-      assert {:error, _} = to_ssml("foo [bar]")
-      assert {:error, _} = to_ssml("foo (baz)[bar:\"bla\"]")
+      assert {:error, {:invalid_instruction, [bar: nil]}} ===
+               to_ssml("foo [bar]")
+
+      assert_raise ParseError, fn -> to_ssml!("foo [bar]") end
+
+      assert {:error, {:invalid_attribute, :bar}} ===
+               to_ssml("foo (baz)[bar:\"bla\"]")
+
+      assert_raise ParseError, fn -> to_ssml!("foo (baz)[bar:\"bla\"]") end
     end
 
     test ":strict" do
-      assert {:error, _} = to_ssml("foo [bar]", validate: :strict)
-      assert {:error, _} = to_ssml("foo (baz)[bar:\"bla\"]", validate: :strict)
+      assert {:error, {:invalid_instruction, [bar: nil]}} ===
+               to_ssml("foo [bar]", validate: :strict)
+
+      assert_raise ParseError, fn ->
+        to_ssml!("foo [bar]", validate: :strict)
+      end
+
+      assert {:error, {:invalid_attribute, :bar}} ===
+               to_ssml("foo (baz)[bar:\"bla\"]", validate: :strict)
+
+      assert_raise ParseError, fn ->
+        to_ssml!("foo (baz)[bar:\"bla\"]", validate: :strict)
+      end
     end
 
     test ":loose" do
-      assert {:ok, "<speak>foo </speak>"} =
+      assert {:ok, "<speak>foo </speak>"} ===
                to_ssml("foo [bar]", validate: :loose)
 
-      assert {:ok, "<speak>foo baz</speak>"} =
+      assert {:ok, "<speak>foo baz</speak>"} ===
                to_ssml("foo (baz)[bar:\"bla\"]", validate: :loose)
 
       assert {:ok,
@@ -71,11 +90,30 @@ defmodule SpeechMarkdownTest do
                  validate: :loose
                )
 
-      assert {:ok, "<speak>foo</speak>"} =
+      assert {:ok, "<speak>foo</speak>"} ===
                to_ssml("#[sectionbla]\nfoo", validate: :loose)
 
-      assert {:ok, "<speak>foo\n</speak>"} =
+      assert {:ok, "<speak>foo\n</speak>"} ===
                to_ssml("#[x;d;d:\"d\"]\nfoo\n#[another]", validate: :loose)
+    end
+  end
+
+  describe "variants" do
+    @voice "#[voice:\"Kendra\"] Section 1"
+
+    test "general" do
+      assert {:ok, "<speak><voice name=\"Kendra\">Section 1</voice></speak>"} =
+               to_ssml(@voice, variant: :general)
+    end
+
+    test "alexa" do
+      assert {:ok, "<speak><voice name=\"Kendra\">Section 1</voice></speak>"} =
+               to_ssml(@voice, variant: :alexa)
+    end
+
+    test "google" do
+      assert {:ok, "<speak>Section 1</speak>"} =
+               to_ssml(@voice, variant: :google)
     end
   end
 end

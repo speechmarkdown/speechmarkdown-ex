@@ -48,19 +48,15 @@ defmodule SpeechMarkdown.Validator do
   end
 
   defp validate_node({:break, break}) do
-    valid_delay(break)
+    validate_delay(break)
   end
 
   defp validate_node({:section, kvs}) do
     validate_kvs(kvs)
   end
 
-  # defp validate_node({:section, [defaults: nil]}) do
-  #   {:ok, {:section, nil}}
-  # end
-
-  defp validate_node(node) do
-    {:error, {:invalid_node, node}}
+  defp validate_node({:block, contents}) do
+    {:error, {:invalid_instruction, contents}}
   end
 
   defp validate_kvs({:error, _} = e) do
@@ -86,25 +82,19 @@ defmodule SpeechMarkdown.Validator do
     end
   end
 
-  # defp validate_kvs([{:break, break} = n | rest]) do
-  #   with :ok <- valid_delay(break) do
-  #     validate_kvs(rest, [n | acc])
-  #   end
-  # end
-
   defp validate_kvs([{k, _v} | rest]) when k in @attributes do
     validate_kvs(rest)
   end
 
   defp validate_kvs([{k, _v} | _rest]) do
-    {:error, {:unknown_attribute, k}}
+    {:error, {:invalid_attribute, k}}
   end
 
-  defp valid_delay(break) when break in @delay_enum do
+  defp validate_delay(break) when break in @delay_enum do
     :ok
   end
 
-  defp valid_delay(break) do
+  defp validate_delay(break) do
     case Regex.match?(@delay_re, break) do
       true -> :ok
       false -> {:error, {:invalid_delay, break}}

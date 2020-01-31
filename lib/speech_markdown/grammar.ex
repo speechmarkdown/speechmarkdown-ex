@@ -80,6 +80,7 @@ defmodule SpeechMarkdown.Grammar do
   section =
     ignore(string("#"))
     |> parsec(:block)
+    |> optional(ignore(repeat(ascii_char([32]))))
     |> reduce(:finalize_section)
 
   audio =

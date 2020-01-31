@@ -140,58 +140,49 @@ defmodule SpeechMarkdown.Transpiler do
          {:prosody, attrs, [{:prosody, attrs2, children}]},
          ordering
        ) do
-    # o =
-    #   ordering
-    #   |> Enum.filter(&(elem(&1, 0) in ~w(rate pitch volume)a))
-    #   |> Enum.map(&elem(&1, 0))
-
-    # lookup =
-    #   (attrs ++ attrs2)
-    #   |> IO.inspect(label: "aaa")
-    #   |> Map.new()
-    #   |> Map.take(~w(rate pitch volume)a)
-
-    # attrs =
-    #   o
-    #   |> Enum.map(&{&1, lookup[&1]})
-    #   |> Enum.reject(&(elem(&1, 1) == nil))
-    #   |> IO.inspect(label: "attrs")
-
     combine_elements({:prosody, attrs ++ attrs2, children}, ordering)
   end
 
   defp combine_elements(
          {:"say-as", attrs, [{:"say-as", attrs, children}]},
-         o
+         ordering
        ) do
-    combine_elements({:"say-as", attrs, children}, o)
+    combine_elements({:"say-as", attrs, children}, ordering)
   end
 
-  defp combine_elements({tag, attrs, children}, o) do
-    {tag, attrs, children |> Enum.map(&combine_elements(&1, o))}
+  defp combine_elements({tag, attrs, children}, ordering) do
+    {tag, attrs, children |> Enum.map(&combine_elements(&1, ordering))}
   end
 
   defp combine_elements(other, _) do
     other
   end
 
+  @google_unsupported ~w(ipa interjection disappointed excited dj newscaster lang voice)a
+
   def get_spec(:google) do
-    (get_spec(:general)
-     |> Enum.reject(
-       &(elem(&1, 0) in ~w(ipa interjection disappointed excited dj newscaster whisper lang voice)a)
-     )) ++ [{:whisper, :prosody, :google}]
+    get_spec(:general, [], [{:whisper, :prosody, :google}])
+    |> Enum.reject(&(elem(&1, 0) in @google_unsupported))
   end
 
-  def get_spec(:alexa), do: get_spec(:general)
+  def get_spec(:alexa) do
+    get_spec(
+      :general,
+      [
+        {:dj, :"amazon:domain", :name},
+        {:newscaster, :"amazon:domain", :name},
+        {:disappointed, :"amazon:emotion", :name},
+        {:excited, :"amazon:emotion", :name}
+      ],
+      [{:whisper, :"amazon:effect", :name}]
+    )
+  end
 
-  def get_spec(:general) do
+  def get_spec(:general, add_begin \\ [], add_end \\ []) do
     [
-      {:dj, :"amazon:domain", :name},
-      {:newscaster, :"amazon:domain", :name},
+      add_begin,
       {:voice, :voice, :name},
       {:lang, :lang, :"xml:lang"},
-      {:disappointed, :"amazon:emotion", :name},
-      {:excited, :"amazon:emotion", :name},
       {:ipa, :phoneme, :ph},
       {:emphasis, :emphasis, :level},
       {:date, :"say-as", :format},
@@ -207,9 +198,10 @@ defmodule SpeechMarkdown.Transpiler do
       {:volume, :prosody, :volume},
       {:pitch, :prosody, :pitch},
       {:rate, :prosody, :rate},
-      {:whisper, :"amazon:effect", :name},
+      add_end,
       {:sub, :sub, :alias}
     ]
+    |> List.flatten()
   end
 
   defp tag_postprocess(:ipa, _, {t, a, v}) do

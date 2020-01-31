@@ -5,16 +5,19 @@ defmodule SpeechMarkdown.ValidatorTest do
   import SpeechMarkdown.Grammar
 
   test "validate" do
-    assert :ok = validate([{:text, "hello"}])
+    assert :ok === validate([{:text, "hello"}])
 
-    assert :ok =
+    assert :ok ===
              validate([
                {:modifier, "address", [{:address, nil}]}
              ])
   end
 
   test "validate breaks" do
-    assert :ok = validate([{:break, "200ms"}])
+    assert :ok === validate([{:break, "200ms"}])
+
+    assert {:error, {:invalid_delay, "verylong"}} ===
+             validate([{:break, "verylong"}])
   end
 
   test "validate a large AST" do
@@ -61,16 +64,12 @@ defmodule SpeechMarkdown.ValidatorTest do
       A +moderate+ level
       A ~none~ level
       A -reduced- level
-
-
       """)
 
-    #    IO.inspect(ast, label: "ast")
-
-    assert :ok = validate(ast)
+    assert :ok === validate(ast)
   end
 
   test "invalid constructs" do
-    assert {:error, _} = validate([{:block, "meh"}])
+    assert {:error, {:invalid_instruction, _}} = validate([{:block, "meh"}])
   end
 end

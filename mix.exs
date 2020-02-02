@@ -5,7 +5,7 @@ defmodule SpeechMarkdown.Mixfile do
     [
       app: :speechmarkdown,
       name: "SpeechMarkdown",
-      version: "0.1.1",
+      version: "0.2.0",
       elixir: "~> 1.9",
       description: "SpeechMarkdown transpiler for Elixir",
       package: package(),
@@ -45,7 +45,7 @@ defmodule SpeechMarkdown.Mixfile do
   defp package do
     [
       files: ["mix.exs", "README.md", "lib"],
-      maintainers: ["Brent M. Spell"],
+      maintainers: ["Brent M. Spell", "Arjan Scherpenisse"],
       licenses: ["Apache 2.0"],
       links: %{
         "GitHub" => "https://github.com/spokestack/speechmarkdown-ex",

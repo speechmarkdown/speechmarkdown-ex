@@ -48,7 +48,7 @@ defmodule SpeechMarkdown.Mixfile do
       maintainers: ["Brent M. Spell", "Arjan Scherpenisse"],
       licenses: ["Apache 2.0"],
       links: %{
-        "GitHub" => "https://github.com/spokestack/speechmarkdown-ex",
+        "GitHub" => "https://github.com/speechmarkdown/speechmarkdown-ex",
         "Docs" => "http://hexdocs.pm/speechmarkdown/"
       }
     ]

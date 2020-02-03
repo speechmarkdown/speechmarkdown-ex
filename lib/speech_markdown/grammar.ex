@@ -1,37 +1,45 @@
 defmodule SpeechMarkdown.Grammar do
-  @moduledoc """
-  This is the nimble-parsec grammar for the subset of the Speech Markdown
-  language supported by this library. The parser is tolerant of any string
-  inputs, but poorly-specified constructs will simply be output as string
-  values. Results are returned as an ast containing a list of tagged tokens,
-  like so:
+  @moduledoc false
 
-    iex> parse!("You say pecan [200ms], I say (pecan)[/pɪˈkɑːn/]")
-    [
-      text: "You say pecan ",
-      break: [200, :ms],
-      text: ", I say ",
-      modifier: ["pecan", {:ipa, "pɪˈkɑːn"}]
-    ]
+  @type attributes :: [{atom(), String.t()}]
+  @type ast_node ::
+          {:text, String.t()}
+          | {:modifier, String.t(), attributes()}
+          | {:block, attributes()}
+          | {:break, String.t()}
+          | {:section, attributes()}
+          | {:section, attributes(), t()}
+  @type t :: [ast_node()]
 
-  """
+  import SpeechMarkdown.Normalizer, only: [normalize_block: 1]
 
   import NimbleParsec
 
   @doc "parse a speech markdown string into an ast"
-  @spec parse!(text :: String.t()) :: keyword()
+  @spec parse!(text :: String.t()) :: t()
   def parse!(text) do
     {:ok, ast} = parse(text)
     ast
   end
 
   @doc "parse a speech markdown string into an ast"
-  @spec parse(text :: String.t()) :: {:ok, keyword()}
+  @spec parse(text :: String.t()) :: {:ok, t()} | {:error, term()}
   def parse(text) do
-    with {:ok, [ast], _, _, _, _} <- document(text) do
-      {:ok, ast}
+    case document(text) do
+      {:ok, [ast], "", _, _, _} ->
+        {:ok, ast}
+
+      {:ok, [_], rest, _, _, _} ->
+        {:error, "Incomplete input near: " <> rest}
+
+      {:ok, _, _, _, _, _} ->
+        {:error, "Failed to parse"}
     end
   end
+
+  # --------------------------------------------------------------------------
+  # helpers
+  # --------------------------------------------------------------------------
 
   # coalesce adjacent text tokens
   defp merge([{:text, x}, {:text, y} | z]) do
@@ -46,73 +54,159 @@ defmodule SpeechMarkdown.Grammar do
     []
   end
 
-  # --------------------------------------------------------------------------
-  # helpers
-  # --------------------------------------------------------------------------
-  atomize = &map(string(empty(), &1), {String, :to_atom, []})
-  space = repeat(ascii_char('\r\n\s\t'))
+  defp empty_block(_), do: :empty_block
+
+  defp finalize_block(b) do
+    {:block,
+     Enum.map(
+       b,
+       fn
+         {:i, [<<x, _::binary>> = v]} when x >= ?0 and x <= ?9 -> {:break, v}
+         {:i, [k]} -> {String.to_atom(k), nil}
+         {:i, [k, v]} -> {String.to_atom(k), v}
+         {:ipa, v} -> {:ipa, v}
+         {:sub, v} -> {:sub, v}
+       end
+     )}
+    |> normalize_block()
+  end
+
+  defp finalize_modifier([text, :empty_block]) do
+    {:text, text}
+  end
+
+  defp finalize_modifier([text, {:block, block}]) do
+    {:modifier, text, block}
+  end
+
+  defp finalize_section([{:block, [defaults: nil]}]) do
+    {:section, []}
+  end
+
+  defp finalize_section([{:block, block}]) do
+    {:section, block}
+  end
+
+  defp short_emphasis([text], emphasis) do
+    {:modifier, text, [emphasis: emphasis]}
+  end
 
   # --------------------------------------------------------------------------
-  # breaks
+  # grammar
   # --------------------------------------------------------------------------
-  break =
-    ignore(string("["))
-    |> ignore(space)
-    |> ignore(optional(string("break") |> optional(space) |> string(":")))
-    |> ignore(space)
-    |> integer(min: 1)
-    |> choice([atomize.("ms"), atomize.("s")])
-    |> ignore(space)
-    |> ignore(string("]"))
-    |> tag(:break)
 
-  # --------------------------------------------------------------------------
-  # ipa
-  # --------------------------------------------------------------------------
-  ipa_long =
-    ignore(optional(string("ipa") |> optional(space) |> string(":")))
-    |> ignore(space)
+  @ws [9, 10, 11, 12, 13, 32]
+  ws = ascii_char(@ws)
+  space = ignore(repeat(ascii_char(@ws)))
+
+  non_ctrl_instr =
+    utf8_char((@ws ++ [?), ?], ?[, ?(, 35, ?!]) |> Enum.map(&{:not, &1}))
+
+  identifier =
+    times(ascii_char('_abcdefghijklmnopqrstuvwxyz1234567890'), min: 1)
+    |> reduce(:to_string)
+
+  single_quoted =
+    ignore(string("'"))
+    |> repeat(utf8_char([{:not, ?'}]))
+    |> reduce(:to_string)
+    |> ignore(string("'"))
+
+  double_quoted =
+    ignore(string("\""))
+    |> repeat(utf8_char([{:not, ?"}]))
+    |> reduce(:to_string)
     |> ignore(string("\""))
-    |> reduce(repeat(utf8_char([{:not, ?"}])), :to_string)
-    |> ignore(string("\""))
 
-  ipa_short =
+  ipa =
     ignore(string("/"))
     |> reduce(repeat(utf8_char([{:not, ?/}])), :to_string)
     |> ignore(string("/"))
-
-  ipa =
-    choice([ipa_long, ipa_short])
     |> unwrap_and_tag(:ipa)
 
-  # --------------------------------------------------------------------------
-  # say-as
-  # --------------------------------------------------------------------------
-  say =
-    choice([atomize.("characters"), atomize.("number")])
-    |> unwrap_and_tag(:say)
+  block =
+    ignore(string("["))
+    |> optional(space)
+    |> parsec(:block_inner)
+    |> repeat(parsec(:block_inner))
+    |> reduce(:finalize_block)
+    |> optional(space)
+    |> ignore(string("]"))
 
-  # --------------------------------------------------------------------------
-  # all modifiers
-  # --------------------------------------------------------------------------
+  defparsec(
+    :block_inner,
+    choice([
+      single_quoted |> unwrap_and_tag(:sub),
+      double_quoted |> unwrap_and_tag(:sub),
+      ipa,
+      identifier
+      |> optional(
+        ignore(string(":"))
+        |> choice([single_quoted, double_quoted])
+      )
+      |> tag(:i)
+    ])
+    |> optional(ignore(string(";")))
+  )
+
   modifier =
     ignore(string("("))
     |> reduce(repeat(utf8_char([{:not, ?)}])), :to_string)
-    |> ignore(string(")["))
-    |> ignore(space)
-    |> choice([ipa, say])
-    |> ignore(space)
-    |> ignore(string("]"))
-    |> tag(:modifier)
+    |> ignore(string(")"))
+    |> choice([block, string("[]") |> reduce(:empty_block)])
+    |> reduce(:finalize_modifier)
 
-  text =
+  section =
+    ignore(string("#"))
+    |> concat(block)
+    |> optional(ignore(repeat(ascii_char([32]))))
+    |> reduce(:finalize_section)
+
+  audio =
+    ignore(string("!["))
+    |> choice([single_quoted, double_quoted])
+    |> ignore(string("]"))
+    |> unwrap_and_tag(:audio)
+
+  plaintext =
     utf8_char([])
     |> reduce(:to_string)
     |> unwrap_and_tag(:text)
 
+  emphasized = fn abbrev, emphasis ->
+    <<char, _::binary>> = abbrev
+
+    empty()
+    |> ignore(string(abbrev))
+    |> concat(non_ctrl_instr)
+    |> repeat(utf8_char([{:not, char}]))
+    |> reduce(:to_string)
+    |> ignore(string(abbrev))
+    |> lookahead(choice([ws, eos()]))
+    |> reduce({:short_emphasis, [emphasis]})
+  end
+
+  defparsec(
+    :any_emphasis,
+    choice([
+      emphasized.("++", "strong"),
+      emphasized.("+", "moderate"),
+      emphasized.("~", "none"),
+      emphasized.("-", "reduced")
+    ])
+    |> lookahead_not(ascii_char([?a..?z, ?A..?Z, ?0..?9]))
+  )
+
   defparsec(
     :document,
-    choice([break, modifier, text])
+    choice([
+      modifier,
+      section,
+      audio,
+      block,
+      parsec(:any_emphasis),
+      plaintext
+    ])
     |> repeat()
     |> reduce(:merge)
   )

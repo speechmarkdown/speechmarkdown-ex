@@ -4,44 +4,87 @@ defmodule SpeechMarkdown.Grammar.Test do
   import SpeechMarkdown.Grammar
 
   test "parse" do
-    # unsupported markup
-    assert parse("") === {:ok, []}
-    assert parse!(" ") === [text: " "]
-    assert parse!("(") === [text: "("]
-    assert parse!(")") === [text: ")"]
-    assert parse!("[") === [text: "["]
-    assert parse!("]") === [text: "]"]
-    assert parse!("()[]") === [text: "()[]"]
-    assert parse!("[invalid]") === [text: "[invalid]"]
-    assert parse!("[break:]") === [text: "[break:]"]
-    assert parse!("[5m]") === [text: "[5m]"]
-    assert parse!("(pecan)[ipa:]") === [text: "(pecan)[ipa:]"]
-    assert parse!("(pecan)[/]") === [text: "(pecan)[/]"]
-    assert parse!("[/pɪˈkɑːn/]") === [text: "[/pɪˈkɑːn/]"]
-    assert parse!("(pecan)[whisper]") === [text: "(pecan)[whisper]"]
-    assert parse!("(pecan))[/pɪˈkɑːn/]") === [text: "(pecan))[/pɪˈkɑːn/]"]
-
-    # breaks
-    assert parse!("[ 100ms]") === [break: [100, :ms]]
-    assert parse!("[2s ]") === [break: [2, :s]]
-    assert parse!("[ break : 5s ]") === [break: [5, :s]]
+    # # unsupported markup
+    assert {:ok, _} = parse("")
+    assert {:ok, _} = parse(" ")
+    assert {:ok, _} = parse("(")
+    assert {:ok, _} = parse(")")
+    assert {:ok, _} = parse("[")
+    assert {:ok, _} = parse("]")
+    assert {:ok, _} = parse("()[]")
+    assert {:ok, _} = parse("[invalid]")
+    assert {:ok, _} = parse("[break:]")
+    assert {:ok, _} = parse("[5m]")
+    assert {:ok, _} = parse("(pecan)[ipa:]")
+    assert {:ok, _} = parse("(pecan)[/]")
+    assert {:ok, _} = parse("(Al)[sub:\"aluminum;\"]")
 
     # ipa
-    assert parse!("(pecan)[ /pɪˈkɑːn/]") === [
-             modifier: ["pecan", ipa: "pɪˈkɑːn"]
-           ]
+    assert {:ok, _} = parse("[/pɪˈkɑːn/]")
+    assert {:ok, _} = parse("(pecan)[/pɪˈkɑːn/]")
 
-    assert parse!("(pecan)[ipa : \"pɪˈkɑːn\" ]") === [
-             modifier: ["pecan", ipa: "pɪˈkɑːn"]
-           ]
+    # # breaks
+    assert {:ok, _} = parse("[ 100ms]")
+    assert {:ok, _} = parse("[2s ]")
+    assert {:ok, _} = parse("[ break : \"5s\" ]")
 
     # say-as
-    assert parse!("(www)[ characters]") === [
-             modifier: ["www", say: :characters]
-           ]
+    assert {:ok, _} = parse("(www)[ characters]")
+    assert {:ok, _} = parse("(1234)[number ]")
+    assert {:ok, _} = parse("[\"aluminum\"]")
+    assert {:ok, _} = parse("(Al)[\"aluminum\"]")
 
-    assert parse!("(1234)[number ]") === [
-             modifier: ["1234", say: :number]
-           ]
+    # audio
+    assert {:ok, _} = parse("![\"http://audio.mp3\"]")
+  end
+
+  test "emphasis" do
+    assert [text: "foo - bar - baz"] === parse!("foo - bar - baz")
+    assert [text: "foo-bar-baz"] === parse!("foo-bar-baz")
+
+    assert {:ok,
+            [
+              {:modifier, "strong", [{:emphasis, "strong"}]}
+            ]} === parse("++strong++")
+
+    assert {:ok,
+            [
+              {:modifier, "strong", [{:emphasis, "strong"}]},
+              {:text, " "},
+              {:modifier, "med", [{:emphasis, "moderate"}]},
+              {:text, " "},
+              {:modifier, "moderate", [{:emphasis, "none"}]},
+              {:text, " "},
+              {:modifier, "reduced", [{:emphasis, "reduced"}]}
+            ]} === parse("++strong++ +med+ ~moderate~ -reduced-")
+  end
+
+  test "special characters" do
+    text = """
+    This is text with (parens) but this and other special characters: []()*~@#\\_!+- are ignored
+    """
+
+    assert [text: text] === parse!(text)
+
+    text = """
+    This is text with ~parens! but this and other special characters: *~@#\\_!+- are ignored
+    """
+
+    assert [text: text] === parse!(text)
+  end
+
+  test "modifier AST" do
+    assert [{:modifier, "hallo", [{:lang, "NL"}]}] ===
+             parse!("(hallo)[lang:\"NL\"]")
+
+    assert [
+             {:text, "Your balance is: "},
+             {:modifier, "12345",
+              [number: nil, emphasis: "strong", whisper: nil, pitch: "high"]},
+             {:text, ".\n"}
+           ] ===
+             parse!("""
+             Your balance is: (12345)[number;emphasis:"strong";whisper;pitch:"high"].
+             """)
   end
 end

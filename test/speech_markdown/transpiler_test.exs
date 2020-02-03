@@ -1,28 +1,26 @@
-defmodule SpeechMarkdown.Transpiler.Test do
-  use ExUnit.Case, async: true
+defmodule SpeechMarkdown.TranspilerTest do
+  use ExUnit.Case
 
   import SpeechMarkdown.Transpiler
 
-  test "transpile" do
-    assert transpile("") === {:ok, ~s|<?xml version="1.0"?><speak/>|}
-    assert transpile!("text") === ~s|<?xml version="1.0"?><speak>text</speak>|
+  describe "deduce_tags" do
+    setup do
+      {:ok, %{spec: get_spec(:general)}}
+    end
 
-    # breaks
-    assert transpile!("[200ms]") ===
-             ~s|<?xml version="1.0"?><speak><break time="200ms"/></speak>|
+    test "sub", %{spec: spec} do
+      assert {:ok, {:sub, [alias: 'Lalala'], ['ll']}} =
+               deduce_tags(spec, [sub: "Lalala"], "ll")
+    end
 
-    assert transpile!("[5s]") ===
-             ~s|<?xml version="1.0"?><speak><break time="5s"/></speak>|
+    test "lang", %{spec: spec} do
+      assert {:ok, {:lang, ["xml:lang": 'NL'], ['Bonjour']}} =
+               deduce_tags(spec, [lang: "NL"], "Bonjour")
+    end
 
-    # ipa
-    assert transpile!("(pecan)[/pɪˈkɑːn/]") ===
-             ~s|<?xml version="1.0"?><speak><phoneme alphabet="ipa" ph="pɪˈkɑːn">pecan</phoneme></speak>|
-
-    # say-as
-    assert transpile!("(www)[characters]") ===
-             ~s|<?xml version="1.0"?><speak><say-as interpret-as="characters">www</say-as></speak>|
-
-    assert transpile!("(1234)[number]") ===
-             ~s|<?xml version="1.0"?><speak><say-as interpret-as="number">1234</say-as></speak>|
+    test "combined", %{spec: spec} do
+      assert {:ok, {:lang, ["xml:lang": 'NL'], [{:sub, [alias: 'x'], ['y']}]}} =
+               deduce_tags(spec, [lang: "NL", sub: "x"], "y")
+    end
   end
 end

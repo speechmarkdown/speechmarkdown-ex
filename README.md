@@ -1,6 +1,6 @@
 # SpeechMarkdown
 
-[Speech Markdown](https://www.speechmarkdown.org/) transpiler for Elixir
+[Speech Markdown](https://www.speechmarkdown.org/) transpiler for Elixir.
 
 This library converts text in the Speech Markdown format to
 [SSML](https://www.w3.org/TR/speech-synthesis11/) for processing by
@@ -8,8 +8,8 @@ Text-To-Speech APIs, etc.
 
 ## Status
 [![Hex](http://img.shields.io/hexpm/v/speechmarkdown.svg?style=flat)](https://hex.pm/packages/speechmarkdown)
-[![CircleCI](https://circleci.com/gh/spokestack/speechmarkdown-ex.svg?style=shield)](https://circleci.com/gh/spokestack/speechmarkdown-ex)
-[![Coverage](https://coveralls.io/repos/github/spokestack/speechmarkdown-ex/badge.svg)](https://coveralls.io/github/spokestack/speechmarkdown-ex)
+[![CircleCI](https://circleci.com/gh/speechmarkdown/speechmarkdown-ex.svg?style=shield)](https://circleci.com/gh/speechmarkdown/speechmarkdown-ex)
+[![Coverage](https://coveralls.io/repos/github/speechmarkdown/speechmarkdown-ex/badge.svg)](https://coveralls.io/github/speechmarkdown/speechmarkdown-ex)
 
 The API reference is available [here](https://hexdocs.pm/speechmarkdown/).
 
@@ -18,20 +18,30 @@ The API reference is available [here](https://hexdocs.pm/speechmarkdown/).
 ```elixir
 def deps do
   [
-    {:speechmarkdown, "~> 0.1"}
+    {:speechmarkdown, "~> 0.2"}
   ]
 end
 ```
 
 ## Usage
 
+As of version 0.2, the entire Speech Markdown specification is
+supported and unified over the multiple implementations (JS, Elixir)
+under a single collection of [reference test cases](https://github.com/speechmarkdown/speechmarkdown-test-files).
+
 ```elixir
-iex> SpeechMarkdown.Transpiler.transpile!("You say pecan, I say (pecan)[/pɪˈkɑːn/].")
+iex> SpeechMarkdown.to_ssml!("You say pecan, I say (pecan)[/pɪˈkɑːn/].")
+
+"<speak>You say pecan, I say <phoneme alphabet=\"ipa\" ph=\"pɪˈkɑːn\">pecan</phoneme>.</speak>"
 ```
 
-```xml
-<?xml version="1.0"?>
-<speak>You say pecan, I say <phoneme alphabet="ipa" ph="pɪˈkɑːn">pecan</phoneme>.</speak>
+The library supports the `:general`, `:alexa` and `:google` variants
+of SSML. Some Speech Markdown tags are only available on those
+platforms, e.g. `[whisper]`:
+
+```elixir
+iex> SpeechMarkdown.to_ssml!("#[whisper] I can see dead people", variant: :alexa)
+"<speak><amazon:effect name=\"whispered\">I can see dead people</amazon:effect></speak>"
 ```
 
 The following Speech Markdown modifiers are supported:
@@ -44,6 +54,7 @@ The following Speech Markdown modifiers are supported:
 ## License
 
 Copyright 2020 Spokestack, Inc.
+Copyright 2020 Bwisc B.V. (Botsquad).
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.

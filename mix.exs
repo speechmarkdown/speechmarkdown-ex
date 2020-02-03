@@ -5,7 +5,7 @@ defmodule SpeechMarkdown.Mixfile do
     [
       app: :speechmarkdown,
       name: "SpeechMarkdown",
-      version: "0.1.1",
+      version: "0.2.0",
       elixir: "~> 1.9",
       description: "SpeechMarkdown transpiler for Elixir",
       package: package(),
@@ -20,13 +20,14 @@ defmodule SpeechMarkdown.Mixfile do
         ignore_warnings: ".dialyzerignore",
         plt_add_deps: :transitive
       ],
+      aliases: aliases(),
+      elixirc_paths: elixirc_paths(Mix.env()),
       docs: [extras: ["README.md"]]
     ]
   end
 
   defp deps do
     [
-      {:sweet_xml, "~> 0.6"},
       {:nimble_parsec, "~> 0.5"},
       {:excoveralls, "~> 0.11", only: :test},
       {:credo, "~> 1.1", only: :dev, runtime: false},
@@ -35,15 +36,39 @@ defmodule SpeechMarkdown.Mixfile do
     ]
   end
 
+  def application do
+    [
+      extra_applications: [:xmerl]
+    ]
+  end
+
   defp package do
     [
       files: ["mix.exs", "README.md", "lib"],
-      maintainers: ["Brent M. Spell"],
+      maintainers: ["Brent M. Spell", "Arjan Scherpenisse"],
       licenses: ["Apache 2.0"],
       links: %{
         "GitHub" => "https://github.com/spokestack/speechmarkdown-ex",
         "Docs" => "http://hexdocs.pm/speechmarkdown/"
       }
+    ]
+  end
+
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
+
+  defp ensure_submodule(_) do
+    path =
+      Path.join(__DIR__, "test/fixtures/speechmarkdown-test-files/test-data")
+
+    if not File.dir?(path) do
+      :os.cmd('git submodule update --init')
+    end
+  end
+
+  defp aliases do
+    [
+      test: [&ensure_submodule/1, "test"]
     ]
   end
 end

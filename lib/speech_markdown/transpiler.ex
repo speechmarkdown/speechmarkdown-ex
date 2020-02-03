@@ -1,9 +1,12 @@
 defmodule SpeechMarkdown.Transpiler do
   @moduledoc false
 
-  alias SpeechMarkdown.{Transpiler.Alexa, Validator}
+  alias SpeechMarkdown.{Grammar, Transpiler.Alexa, Validator}
 
-  @spec transpile(any(), any()) :: {:ok, String.t()}
+  @doc """
+  Transpiles SpeechMarkdown AST into a SSML string.
+  """
+  @spec transpile(Grammar.t(), SpeechMarkdown.options()) :: {:ok, String.t()}
   def transpile(ast, options) do
     xml_declaration = Keyword.get(options, :xml_declaration, false)
     variant = Keyword.get(options, :variant, :general)

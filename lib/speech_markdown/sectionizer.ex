@@ -1,6 +1,12 @@
 defmodule SpeechMarkdown.Sectionizer do
   @moduledoc false
 
+  @doc """
+  Divides the AST into sections
+
+  Given the AST, get all section nodes and group the following tags
+  under the given section.
+  """
   def sectionize(ast) do
     Enum.reduce(ast, [{[], []}], &sectionize_node/2)
     |> reverse_last_section()

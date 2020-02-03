@@ -18,6 +18,9 @@ defmodule SpeechMarkdown.Normalizer do
     disappointed: "medium"
   }
 
+  @doc """
+  Normalizes a :block AST tag by adding default values to well-known attributes
+  """
   def normalize_block({:block, [break: break]}) do
     {:break, break}
   end

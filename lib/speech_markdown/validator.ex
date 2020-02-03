@@ -1,6 +1,8 @@
 defmodule SpeechMarkdown.Validator do
   @moduledoc false
 
+  alias SpeechMarkdown.Grammar
+
   @attributes ~w(
     address break cardinal characters date disappointed disappointed
     dj emphasis emphasis excited excited expletive fraction
@@ -18,7 +20,11 @@ defmodule SpeechMarkdown.Validator do
   @delay_re ~r/^(\d+)\s*(ms|sec|day|month|year|y|m|s|h|hour|hours)$/
   @delay_enum ~w(none x-weak weak medium strong x-strong)
 
-  @spec validate(ast :: [term()]) :: :ok | {:error, any()}
+  @doc """
+  Validates the given SpeechMarkdown AST, checking if every block,
+  section and modifier contains only known keys and attributes.
+  """
+  @spec validate(ast :: Grammar.t()) :: :ok | {:error, any()}
   def validate(raw) when is_list(raw) do
     Enum.reduce(
       raw,

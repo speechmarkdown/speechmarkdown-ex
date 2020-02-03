@@ -1,19 +1,29 @@
 defmodule SpeechMarkdown.Grammar do
   @moduledoc false
 
+  @type attributes :: [{atom(), String.t()}]
+  @type ast_node ::
+          {:text, String.t()}
+          | {:modifier, String.t(), attributes()}
+          | {:block, attributes()}
+          | {:break, String.t()}
+          | {:section, attributes()}
+          | {:section, attributes(), t()}
+  @type t :: [ast_node()]
+
   import SpeechMarkdown.Normalizer, only: [normalize_block: 1]
 
   import NimbleParsec
 
   @doc "parse a speech markdown string into an ast"
-  @spec parse!(text :: String.t()) :: keyword()
+  @spec parse!(text :: String.t()) :: t()
   def parse!(text) do
     {:ok, ast} = parse(text)
     ast
   end
 
   @doc "parse a speech markdown string into an ast"
-  @spec parse(text :: String.t()) :: {:ok, keyword()} | {:error, term()}
+  @spec parse(text :: String.t()) :: {:ok, t()} | {:error, term()}
   def parse(text) do
     case document(text) do
       {:ok, [ast], "", _, _, _} ->

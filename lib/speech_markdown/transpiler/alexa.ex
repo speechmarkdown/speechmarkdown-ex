@@ -32,6 +32,10 @@ defmodule SpeechMarkdown.Transpiler.Alexa do
                 }
                 |> Map.keys()
 
+  @doc """
+  Find the proper, case-sensitive name of an Alexa voice.
+  """
+  @spec lookup_voice(String.t()) :: String.t() | nil
   def lookup_voice(voice) do
     Enum.find(@alexa_voices, &(String.downcase(&1) == String.downcase(voice)))
   end

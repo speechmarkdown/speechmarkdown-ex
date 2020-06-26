@@ -38,9 +38,15 @@ defmodule SpeechMarkdown.Grammar.Test do
     assert {:ok, _} = parse("![\"http://audio.mp3\"]")
   end
 
-  test "emphasis" do
+  test "emphasized symbols" do
     assert [text: "foo - bar - baz"] === parse!("foo - bar - baz")
     assert [text: "foo-bar-baz"] === parse!("foo-bar-baz")
+
+    t = "a-b- "
+    assert [text: t] == parse!(t)
+
+    assert [text: "020-123 en mijn 010-123"] ===
+             parse!("020-123 en mijn 010-123")
 
     assert {:ok,
             [

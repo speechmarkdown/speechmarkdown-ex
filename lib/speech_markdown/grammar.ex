@@ -46,6 +46,10 @@ defmodule SpeechMarkdown.Grammar do
     merge([{:text, x <> y} | z])
   end
 
+  defp merge([x | y]) when is_integer(x) do
+    merge([{:text, <<x>>} | y])
+  end
+
   defp merge([x | y]) do
     [x | merge(y)]
   end
@@ -200,14 +204,20 @@ defmodule SpeechMarkdown.Grammar do
   defparsec(
     :document,
     choice([
-      modifier,
-      section,
-      audio,
-      block,
       parsec(:any_emphasis),
-      plaintext
+      empty()
     ])
-    |> repeat()
+    |> concat(
+      choice([
+        modifier,
+        section,
+        audio,
+        block,
+        ws |> parsec(:any_emphasis),
+        plaintext
+      ])
+      |> repeat()
+    )
     |> reduce(:merge)
   )
 end

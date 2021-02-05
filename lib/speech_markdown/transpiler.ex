@@ -45,6 +45,10 @@ defmodule SpeechMarkdown.Transpiler do
     {:audio, [src: src], []}
   end
 
+  defp convert({:mark, name}, _variant) do
+    {:mark, [name: name], []}
+  end
+
   defp convert({:text, text}, _variant) do
     ch(String.trim_leading(text, "\n"))
   end

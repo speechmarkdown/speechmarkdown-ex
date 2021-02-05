@@ -49,6 +49,10 @@ defmodule SpeechMarkdown.Validator do
     :ok
   end
 
+  defp validate_node({:mark, _}) do
+    :ok
+  end
+
   defp validate_node({:modifier, _text, kvs}) do
     validate_kvs(kvs)
   end

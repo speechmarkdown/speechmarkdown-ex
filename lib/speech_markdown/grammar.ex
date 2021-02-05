@@ -166,6 +166,12 @@ defmodule SpeechMarkdown.Grammar do
     |> optional(ignore(repeat(ascii_char([32]))))
     |> reduce(:finalize_section)
 
+  mark =
+    ignore(string("$["))
+    |> concat(identifier)
+    |> ignore(string("]"))
+    |> unwrap_and_tag(:mark)
+
   audio =
     ignore(string("!["))
     |> choice([single_quoted, double_quoted])
@@ -211,6 +217,7 @@ defmodule SpeechMarkdown.Grammar do
       choice([
         modifier,
         section,
+        mark,
         audio,
         block,
         ws |> parsec(:any_emphasis),

@@ -28,7 +28,7 @@ defmodule SpeechMarkdown.Mixfile do
 
   defp deps do
     [
-      {:nimble_parsec, "~> 0.5"},
+      {:nimble_parsec, "~> 0.5 or ~> 1.0"},
       {:excoveralls, "~> 0.11", only: :test},
       {:credo, "~> 1.1", only: :dev, runtime: false},
       {:dialyxir, "~> 0.5", only: :dev, runtime: false},

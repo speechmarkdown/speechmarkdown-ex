@@ -165,7 +165,7 @@ defmodule SpeechMarkdown.Transpiler do
     other
   end
 
-  @google_unsupported ~w(ipa interjection disappointed excited dj newscaster lang voice)a
+  @google_unsupported ~w(ipa interjection disappointed excited dj newscaster voice lang)a
 
   def get_spec(:google) do
     get_spec(:general, [], [{:whisper, :prosody, :google}])

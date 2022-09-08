@@ -1,4 +1,4 @@
 [submodule "test/fixtures/speechmarkdown-test-files"]
 	path = test/fixtures/speechmarkdown-test-files
 	url = https://github.com/speechmarkdown/speechmarkdown-test-files
-	branch = js-test-cases
+	branch = master

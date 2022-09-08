@@ -4,10 +4,10 @@ defmodule SpeechMarkdown.Validator do
   alias SpeechMarkdown.Grammar
 
   @attributes ~w(
-    address break cardinal characters date disappointed disappointed
+    address break currency cardinal characters date disappointed disappointed
     dj emphasis emphasis excited excited expletive fraction
     interjection ipa lang newscaster number ordinal pitch sub
-    telephone time unit voice whisper
+    telephone time unit verbatim voice whisper
   )a
 
   @enum_attrs [

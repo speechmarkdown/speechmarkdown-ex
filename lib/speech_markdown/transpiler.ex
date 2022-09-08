@@ -197,11 +197,15 @@ defmodule SpeechMarkdown.Transpiler do
       {:unit, :"say-as", :"interpret-as"},
       {:address, :"say-as", :"interpret-as"},
       {:characters, :"say-as", :"interpret-as"},
+      {:cardinal, :"say-as", :"interpret-as"},
       {:ordinal, :"say-as", :"interpret-as"},
       {:number, :"say-as", :"interpret-as"},
       {:interjection, :"say-as", :"interpret-as"},
       {:expletive, :"say-as", :"interpret-as"},
       {:fraction, :"say-as", :"interpret-as"},
+      {:telephone, :"say-as", :"interpret-as"},
+      {:currency, :"say-as", :"interpret-as"},
+      {:verbatim, :"say-as", :"interpret-as"},
       {:volume, :prosody, :volume},
       {:pitch, :prosody, :pitch},
       {:rate, :prosody, :rate},
@@ -213,6 +217,10 @@ defmodule SpeechMarkdown.Transpiler do
 
   defp tag_postprocess(:ipa, _, {t, a, v}) do
     {t, [{:alphabet, 'ipa'} | a], v}
+  end
+
+  defp tag_postprocess(:currency, _, {t, a, v}) do
+    {t, [{:language, 'en-US'} | a], v}
   end
 
   defp tag_postprocess(date_or_time, _, {t, a, v})

@@ -1,10 +1,11 @@
-defmodule SpeechMarkdowntendedCasesTests do
+defmodule SpeechMarkdown.ExtendedCasesTests do
+  @moduledoc """
+  Cover some out-of-spec SMD cases
+  """
   use ExUnit.Case, async: true
 
   import SpeechMarkdown, only: [to_ssml: 2, to_plaintext: 1]
   import SpeechMarkdown.TestSupport.FixtureHelper
-
-  # out-of-spec SMD cases
 
   @cases [
     # SSML mark
@@ -13,7 +14,7 @@ defmodule SpeechMarkdowntendedCasesTests do
 
   for {smd, ssml, txt} <- @cases do
     test "SMD #{smd}" do
-      assert {:ok, result} = to_ssml(unquote(smd), variant: :generic)
+      assert {:ok, result} = to_ssml(unquote(smd), variant: :general)
       assert_xml(unquote(ssml) == result)
 
       assert {:ok, result} = to_plaintext(unquote(smd))

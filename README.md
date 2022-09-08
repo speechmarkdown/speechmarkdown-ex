@@ -9,7 +9,6 @@ Text-To-Speech APIs, etc.
 ## Status
 
 [![Hex](http://img.shields.io/hexpm/v/speechmarkdown.svg?style=flat)](https://hex.pm/packages/speechmarkdown)
-[![CircleCI](https://circleci.com/gh/speechmarkdown/speechmarkdown-ex.svg?style=shield)](https://circleci.com/gh/speechmarkdown/speechmarkdown-ex)
 [![Coverage](https://coveralls.io/repos/github/speechmarkdown/speechmarkdown-ex/badge.svg)](https://coveralls.io/github/speechmarkdown/speechmarkdown-ex)
 
 The API reference is available [here](https://hexdocs.pm/speechmarkdown/).

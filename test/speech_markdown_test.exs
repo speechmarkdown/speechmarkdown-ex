@@ -1,5 +1,5 @@
 defmodule SpeechMarkdownTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   import SpeechMarkdown
   alias SpeechMarkdown.ParseError

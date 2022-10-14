@@ -1,5 +1,5 @@
 defmodule SpeechMarkdown.NormalizerTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   import SpeechMarkdown.Grammar
 

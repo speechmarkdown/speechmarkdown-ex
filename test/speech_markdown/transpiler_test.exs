@@ -1,5 +1,5 @@
 defmodule SpeechMarkdown.TranspilerTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   import SpeechMarkdown.Transpiler
 

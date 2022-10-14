@@ -1,5 +1,5 @@
 defmodule SpeechMarkdown.SectionizerTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   import SpeechMarkdown.Sectionizer
   import SpeechMarkdown.Grammar

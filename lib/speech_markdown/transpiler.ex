@@ -41,7 +41,18 @@ defmodule SpeechMarkdown.Transpiler do
     end
   end
 
-  defp convert({:audio, src}, _variant) do
+  # https://cloud.google.com/text-to-speech/docs/ssml#audio
+  # "The contents may include a <desc> element in which case the text contents
+  # of that element are used for display."
+  defp convert({:audio, caption, src}, variant)
+       when is_binary(caption) and byte_size(caption) > 0 and variant != :alexa do
+    {:audio, [src: src],
+     [
+       {:desc, [], [ch(caption)]}
+     ]}
+  end
+
+  defp convert({:audio, _, src}, _variant) do
     {:audio, [src: src], []}
   end
 

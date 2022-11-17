@@ -36,6 +36,8 @@ defmodule SpeechMarkdown.Grammar.Test do
 
     # audio
     assert {:ok, _} = parse("![\"http://audio.mp3\"]")
+    assert {:ok, _} = parse("!()[\"https://audio.mp3\"]")
+    assert {:ok, _} = parse("!(hello world)[\"http://audio.mp3\"]")
   end
 
   test "emphasized symbols" do

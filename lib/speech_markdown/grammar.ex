@@ -95,6 +95,14 @@ defmodule SpeechMarkdown.Grammar do
     {:modifier, text, [emphasis: emphasis]}
   end
 
+  defp finalize_audio([url]) do
+    {:audio, nil, url}
+  end
+
+  defp finalize_audio([caption, url]) do
+    {:audio, caption, url}
+  end
+
   # --------------------------------------------------------------------------
   # grammar
   # --------------------------------------------------------------------------
@@ -153,10 +161,13 @@ defmodule SpeechMarkdown.Grammar do
     |> optional(ignore(string(";")))
   )
 
-  modifier =
+  caption =
     ignore(string("("))
     |> reduce(repeat(utf8_char([{:not, ?)}])), :to_string)
     |> ignore(string(")"))
+
+  modifier =
+    caption
     |> choice([block, string("[]") |> reduce(:empty_block)])
     |> reduce(:finalize_modifier)
 
@@ -173,10 +184,12 @@ defmodule SpeechMarkdown.Grammar do
     |> unwrap_and_tag(:mark)
 
   audio =
-    ignore(string("!["))
+    ignore(string("!"))
+    |> optional(caption)
+    |> ignore(string("["))
     |> choice([single_quoted, double_quoted])
     |> ignore(string("]"))
-    |> unwrap_and_tag(:audio)
+    |> reduce(:finalize_audio)
 
   plaintext =
     utf8_char([])

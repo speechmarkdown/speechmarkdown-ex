@@ -45,7 +45,7 @@ defmodule SpeechMarkdown.Validator do
     :ok
   end
 
-  defp validate_node({:audio, _}) do
+  defp validate_node({:audio, _, _}) do
     :ok
   end
 

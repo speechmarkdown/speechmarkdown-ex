@@ -1,5 +1,5 @@
 defmodule SpeechMarkdown.ValidatorTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   import SpeechMarkdown.Validator
   import SpeechMarkdown.Grammar

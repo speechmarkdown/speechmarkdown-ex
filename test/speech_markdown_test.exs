@@ -99,21 +99,33 @@ defmodule SpeechMarkdownTest do
   end
 
   describe "variants" do
-    @voice "#[voice:\"Kendra\"] Section 1"
+    @alexa_voice "#[voice:\"Kendra\"] Section 1"
+    @google_voice "#[voice:\"nl-NL-Standard-A\"] Section 1"
 
     test "general" do
       assert {:ok, "<speak><voice name=\"Kendra\">Section 1</voice></speak>"} =
-               to_ssml(@voice, variant: :general)
+               to_ssml(@alexa_voice, variant: :general)
+
+      assert {:ok,
+              "<speak><voice name=\"nl-NL-Standard-A\">Section 1</voice></speak>"} =
+               to_ssml(@google_voice, variant: :general)
     end
 
     test "alexa" do
       assert {:ok, "<speak><voice name=\"Kendra\">Section 1</voice></speak>"} =
-               to_ssml(@voice, variant: :alexa)
+               to_ssml(@alexa_voice, variant: :alexa)
+
+      assert {:ok, "<speak>Section 1</speak>"} =
+               to_ssml(@google_voice, variant: :alexa)
     end
 
     test "google" do
       assert {:ok, "<speak>Section 1</speak>"} =
-               to_ssml(@voice, variant: :google)
+               to_ssml(@alexa_voice, variant: :google)
+
+      assert {:ok,
+              "<speak><voice name=\"nl-NL-Standard-A\">Section 1</voice></speak>"} =
+               to_ssml(@google_voice, variant: :google)
     end
   end
 end

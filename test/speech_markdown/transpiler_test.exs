@@ -10,17 +10,17 @@ defmodule SpeechMarkdown.TranspilerTest do
 
     test "sub", %{spec: spec} do
       assert {:ok, {:sub, [alias: 'Lalala'], ['ll']}} =
-               deduce_tags(spec, [sub: "Lalala"], "ll")
+               deduce_tags(spec, [sub: "Lalala"], "ll", :general)
     end
 
     test "lang", %{spec: spec} do
       assert {:ok, {:lang, ["xml:lang": 'NL'], ['Bonjour']}} =
-               deduce_tags(spec, [lang: "NL"], "Bonjour")
+               deduce_tags(spec, [lang: "NL"], "Bonjour", :general)
     end
 
     test "combined", %{spec: spec} do
       assert {:ok, {:lang, ["xml:lang": 'NL'], [{:sub, [alias: 'x'], ['y']}]}} =
-               deduce_tags(spec, [lang: "NL", sub: "x"], "y")
+               deduce_tags(spec, [lang: "NL", sub: "x"], "y", :general)
     end
   end
 end

@@ -1,7 +1,7 @@
 defmodule SpeechMarkdown.Transpiler do
   @moduledoc false
 
-  alias SpeechMarkdown.{Grammar, Transpiler.Alexa, Validator}
+  alias SpeechMarkdown.{Grammar, Transpiler.Alexa, Transpiler.Google, Validator}
 
   @doc """
   Transpiles SpeechMarkdown AST into a SSML string.
@@ -27,7 +27,7 @@ defmodule SpeechMarkdown.Transpiler do
     inner = Enum.map([text: inner], &convert(&1, variant))
 
     with {:ok, node} <-
-           variant |> get_spec() |> deduce_tags(modifier_keys, inner) do
+           variant |> get_spec() |> deduce_tags(modifier_keys, inner, variant) do
       node
     end
   end
@@ -36,7 +36,7 @@ defmodule SpeechMarkdown.Transpiler do
     inner = Enum.map(nodes, &convert(&1, variant))
 
     with {:ok, node} <-
-           variant |> get_spec() |> deduce_tags(modifier_keys, inner) do
+           variant |> get_spec() |> deduce_tags(modifier_keys, inner, variant) do
       node
     end
   end
@@ -118,7 +118,7 @@ defmodule SpeechMarkdown.Transpiler do
     reduce_duplicate_say_as(rest, [item | acc])
   end
 
-  def deduce_tags(spec, modifier_keys, child_node) do
+  def deduce_tags(spec, modifier_keys, child_node, variant) do
     modifier_keys = filter_duplicate_say_as(modifier_keys, spec)
 
     result =
@@ -131,7 +131,7 @@ defmodule SpeechMarkdown.Transpiler do
               tag =
                 {tag, [{attr, ch(value || key)}], as_child_nodes(child_node)}
 
-              tag_postprocess(key, value, tag)
+              tag_postprocess(key, value, tag, variant) || child_node
 
             :error ->
               child_node
@@ -176,7 +176,7 @@ defmodule SpeechMarkdown.Transpiler do
     other
   end
 
-  @google_unsupported ~w(ipa interjection disappointed excited dj newscaster voice lang)a
+  @google_unsupported ~w(interjection disappointed excited dj newscaster)a
 
   def get_spec(:google) do
     get_spec(:general, [], [{:whisper, :prosody, :google}])
@@ -226,58 +226,66 @@ defmodule SpeechMarkdown.Transpiler do
     |> List.flatten()
   end
 
-  defp tag_postprocess(:ipa, _, {t, a, v}) do
+  defp tag_postprocess(:ipa, _, {t, a, v}, _variant) do
     {t, [{:alphabet, 'ipa'} | a], v}
   end
 
-  defp tag_postprocess(:currency, _, {t, a, v}) do
+  defp tag_postprocess(:currency, _, {t, a, v}, _variant) do
     {t, [{:language, 'en-US'} | a], v}
   end
 
-  defp tag_postprocess(date_or_time, _, {t, a, v})
+  defp tag_postprocess(date_or_time, _, {t, a, v}, _variant)
        when date_or_time in ~w(date time)a do
     {t, [{:"interpret-as", ch(date_or_time)} | a], v}
   end
 
   @intensities ~w(low medium high)
-  defp tag_postprocess(emotion, intensity, {tag, _, c})
+  defp tag_postprocess(emotion, intensity, {tag, _, c}, _variant)
        when emotion in ~w(disappointed excited)a do
     case String.downcase(intensity) do
       i when i in @intensities ->
         {tag, [name: emotion, intensity: ch(i)], c}
 
       _ ->
-        c
+        nil
     end
   end
 
-  defp tag_postprocess(:dj, _, {tag, _, c}) do
+  defp tag_postprocess(:dj, _, {tag, _, c}, _variant) do
     {tag, [name: 'music'], c}
   end
 
-  defp tag_postprocess(:newscaster, _, {tag, _, c}) do
+  defp tag_postprocess(:newscaster, _, {tag, _, c}, _variant) do
     {tag, [name: 'news'], c}
   end
 
-  defp tag_postprocess(:whisper, _, {_, [google: _], c}) do
+  defp tag_postprocess(:whisper, _, {_, [google: _], c}, _variant) do
     {:prosody, [volume: 'x-soft', rate: 'slow'], c}
   end
 
-  defp tag_postprocess(:whisper, _, {tag, _, c}) do
+  defp tag_postprocess(:whisper, _, {tag, _, c}, _variant) do
     {tag, [name: 'whispered'], c}
   end
 
-  defp tag_postprocess(:voice, voice, {_tag, _, c}) do
-    case Alexa.lookup_voice(voice) do
-      nil ->
-        c
-
-      voice ->
-        {:voice, [name: ch(voice)], c}
+  defp tag_postprocess(:voice, voice, {_tag, _, c}, :google) do
+    case Google.lookup_voice(voice) do
+      nil -> nil
+      voice -> {:voice, [name: ch(voice)], c}
     end
   end
 
-  defp tag_postprocess(_key, _value, tag) do
+  defp tag_postprocess(:voice, voice, {_tag, _, c}, :alexa) do
+    case Alexa.lookup_voice(voice) do
+      nil -> nil
+      voice -> {:voice, [name: ch(voice)], c}
+    end
+  end
+
+  defp tag_postprocess(:voice, voice, {_tag, _, c}, :general) do
+    {:voice, [name: ch(voice)], c}
+  end
+
+  defp tag_postprocess(_key, _value, tag, _variant) do
     tag
   end
 end

@@ -227,11 +227,11 @@ defmodule SpeechMarkdown.Transpiler do
   end
 
   defp tag_postprocess(:ipa, _, {t, a, v}, _variant) do
-    {t, [{:alphabet, 'ipa'} | a], v}
+    {t, [{:alphabet, ~c"ipa"} | a], v}
   end
 
   defp tag_postprocess(:currency, _, {t, a, v}, _variant) do
-    {t, [{:language, 'en-US'} | a], v}
+    {t, [{:language, ~c"en-US"} | a], v}
   end
 
   defp tag_postprocess(date_or_time, _, {t, a, v}, _variant)
@@ -252,19 +252,19 @@ defmodule SpeechMarkdown.Transpiler do
   end
 
   defp tag_postprocess(:dj, _, {tag, _, c}, _variant) do
-    {tag, [name: 'music'], c}
+    {tag, [name: ~c"music"], c}
   end
 
   defp tag_postprocess(:newscaster, _, {tag, _, c}, _variant) do
-    {tag, [name: 'news'], c}
+    {tag, [name: ~c"news"], c}
   end
 
   defp tag_postprocess(:whisper, _, {_, [google: _], c}, _variant) do
-    {:prosody, [volume: 'x-soft', rate: 'slow'], c}
+    {:prosody, [volume: ~c"x-soft", rate: ~c"slow"], c}
   end
 
   defp tag_postprocess(:whisper, _, {tag, _, c}, _variant) do
-    {tag, [name: 'whispered'], c}
+    {tag, [name: ~c"whispered"], c}
   end
 
   defp tag_postprocess(:voice, voice, {_tag, _, c}, :google) do

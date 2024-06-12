@@ -115,7 +115,7 @@ defmodule SpeechMarkdown.Grammar do
     utf8_char((@ws ++ [?), ?], ?[, ?(, 35, ?!]) |> Enum.map(&{:not, &1}))
 
   identifier =
-    times(ascii_char('_abcdefghijklmnopqrstuvwxyz1234567890'), min: 1)
+    times(ascii_char(~c"_abcdefghijklmnopqrstuvwxyz1234567890"), min: 1)
     |> reduce(:to_string)
 
   single_quoted =

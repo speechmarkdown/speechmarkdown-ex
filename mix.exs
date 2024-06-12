@@ -62,7 +62,7 @@ defmodule SpeechMarkdown.Mixfile do
       Path.join(__DIR__, "test/fixtures/speechmarkdown-test-files/test-data")
 
     if not File.dir?(path) do
-      :os.cmd('git submodule update --init')
+      :os.cmd(~c"git submodule update --init")
     end
   end
 

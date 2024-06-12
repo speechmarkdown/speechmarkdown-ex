@@ -83,10 +83,7 @@ defmodule SpeechMarkdown.Validator do
       validate_kvs(rest)
     end
 
-    defp validate_kvs(
-           [{unquote(attr), value} | _rest],
-           _acc
-         ) do
+    defp validate_kvs([{unquote(attr), value} | _rest]) do
       {:error,
        {:invalid_attribute_value, {unquote(Atom.to_string(attr)), value}}}
     end
